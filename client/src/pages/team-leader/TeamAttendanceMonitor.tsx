@@ -3,62 +3,96 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCircle, XCircle, Clock, Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+
+interface AttendanceRecord {
+  userId: number;
+  displayName: string;
+  photoURL?: string;
+  clockIn?: string;
+  clockOut?: string;
+  totalHours?: number;
+  status: string;
+}
 
 export default function TeamAttendanceMonitor() {
-  const teamAttendance = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      avatar: "",
-      clockIn: "08:55 AM",
-      clockOut: null,
-      status: "present",
-      totalHours: "4h 35m",
-    },
-    {
-      id: 2,
-      name: "Mike Chen",
-      avatar: "",
-      clockIn: "09:02 AM",
-      clockOut: null,
-      status: "present",
-      totalHours: "4h 28m",
-    },
-    {
-      id: 3,
-      name: "Emily Rodriguez",
-      avatar: "",
-      clockIn: null,
-      clockOut: null,
-      status: "absent",
-      totalHours: "0h",
-    },
-  ];
+  const { dbUserId } = useAuth();
+
+  const { data: attendanceRecords = [], isLoading } = useQuery<AttendanceRecord[]>({
+    queryKey: [`/api/team-assignments/${dbUserId}/attendance/today`],
+    enabled: !!dbUserId,
+    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+  });
 
   const stats = {
-    present: 2,
-    absent: 1,
-    late: 0,
-    onLeave: 0,
+    present: attendanceRecords.filter(r => r.status === "present").length,
+    absent: attendanceRecords.filter(r => r.status === "absent").length,
+    late: attendanceRecords.filter(r => r.status === "late").length,
+    onLeave: attendanceRecords.filter(r => r.status === "on_leave").length,
   };
+
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return null;
+    return new Date(timeStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatHours = (hours?: number) => {
+    if (!hours) return "0h";
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}h ${m}m`;
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "present": return "default";
+      case "late": return "secondary";
+      case "absent": return "destructive";
+      case "on_leave": return "secondary";
+      default: return "secondary";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <Skeleton className="h-10 w-48 mb-2" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+          <Skeleton className="h-10 w-40" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-12" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Team Attendance</h1>
+          <h1 className="text-3xl font-bold">Team Attendance - Today</h1>
           <p className="text-muted-foreground">Monitor your team's attendance in real-time</p>
         </div>
-        <Select defaultValue="today">
-          <SelectTrigger className="w-40" data-testid="select-date-range">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">This Week</SelectItem>
-            <SelectItem value="month">This Month</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -68,7 +102,7 @@ export default function TeamAttendanceMonitor() {
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.present}</div>
+            <div className="text-2xl font-bold" data-testid="stat-present">{stats.present}</div>
           </CardContent>
         </Card>
         <Card>
@@ -77,7 +111,7 @@ export default function TeamAttendanceMonitor() {
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.absent}</div>
+            <div className="text-2xl font-bold" data-testid="stat-absent">{stats.absent}</div>
           </CardContent>
         </Card>
         <Card>
@@ -86,7 +120,7 @@ export default function TeamAttendanceMonitor() {
             <Clock className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.late}</div>
+            <div className="text-2xl font-bold" data-testid="stat-late">{stats.late}</div>
           </CardContent>
         </Card>
         <Card>
@@ -95,7 +129,7 @@ export default function TeamAttendanceMonitor() {
             <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.onLeave}</div>
+            <div className="text-2xl font-bold" data-testid="stat-leave">{stats.onLeave}</div>
           </CardContent>
         </Card>
       </div>
@@ -105,37 +139,43 @@ export default function TeamAttendanceMonitor() {
           <CardTitle>Team Members</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {teamAttendance.map((member) => (
-              <div
-                key={member.id}
-                className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b last:border-0"
-                data-testid={`member-attendance-${member.id}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={member.avatar} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {member.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{member.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {member.clockIn ? `In: ${member.clockIn}` : "Not clocked in"}
-                      {member.clockOut && ` | Out: ${member.clockOut}`}
-                    </p>
+          {attendanceRecords.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground">No attendance records for today</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {attendanceRecords.map((member) => (
+                <div
+                  key={member.userId}
+                  className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b last:border-0"
+                  data-testid={`member-attendance-${member.userId}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage src={member.photoURL} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {getInitials(member.displayName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{member.displayName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {member.clockIn ? `In: ${formatTime(member.clockIn)}` : "Not clocked in"}
+                        {member.clockOut && ` | Out: ${formatTime(member.clockOut)}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium">{formatHours(member.totalHours)}</span>
+                    <Badge variant={getStatusBadgeVariant(member.status)}>
+                      {member.status.replace('_', ' ')}
+                    </Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium">{member.totalHours}</span>
-                  <Badge variant={member.status === "present" ? "default" : "destructive"}>
-                    {member.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

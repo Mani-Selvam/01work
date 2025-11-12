@@ -3,38 +3,68 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, UserPlus, Mail, Phone } from "lucide-react";
+import { Search, UserPlus, Mail, Phone, UserCheck, UserX } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+
+interface TeamMember {
+  id: number;
+  displayName: string;
+  email: string;
+  photoURL?: string;
+  uniqueUserId: string;
+  isActive: boolean;
+}
 
 export default function TeamMembers() {
-  const teamMembers = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      email: "sarah.j@company.com",
-      phone: "+1 234-567-8901",
-      role: "Senior Developer",
-      status: "active",
-      avatar: "",
-    },
-    {
-      id: 2,
-      name: "Mike Chen",
-      email: "mike.c@company.com",
-      phone: "+1 234-567-8902",
-      role: "Designer",
-      status: "active",
-      avatar: "",
-    },
-    {
-      id: 3,
-      name: "Emily Rodriguez",
-      email: "emily.r@company.com",
-      phone: "+1 234-567-8903",
-      role: "Developer",
-      status: "on_leave",
-      avatar: "",
-    },
-  ];
+  const { dbUserId } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: teamMembers = [], isLoading } = useQuery<TeamMember[]>({
+    queryKey: [`/api/team-assignments/${dbUserId}/members`],
+    enabled: !!dbUserId,
+  });
+
+  const filteredMembers = teamMembers.filter(member => 
+    member.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.uniqueUserId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <Skeleton className="h-10 w-48 mb-2" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Skeleton className="h-10 w-full max-w-md" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-16 w-16 rounded-full" />
+                <Skeleton className="h-4 w-32 mt-2" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -43,7 +73,7 @@ export default function TeamMembers() {
           <h1 className="text-3xl font-bold">My Team</h1>
           <p className="text-muted-foreground">Manage your assigned team members</p>
         </div>
-        <Button data-testid="button-add-member">
+        <Button data-testid="button-add-member" disabled>
           <UserPlus className="h-4 w-4 mr-2" />
           Add Member
         </Button>
@@ -55,44 +85,59 @@ export default function TeamMembers() {
           <Input
             placeholder="Search team members..."
             className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             data-testid="input-search-members"
           />
         </div>
       </div>
 
+      {filteredMembers.length === 0 && !isLoading && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <UserX className="h-16 w-16 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-lg font-medium">
+              {searchTerm ? "No matching team members found" : "No team members assigned yet"}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {searchTerm ? "Try a different search term" : "Contact your admin to assign team members"}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {teamMembers.map((member) => (
+        {filteredMembers.map((member) => (
           <Card key={member.id} data-testid={`card-member-${member.id}`}>
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <Avatar>
-                    <AvatarImage src={member.avatar} />
+                    <AvatarImage src={member.photoURL} />
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {member.name.split(' ').map(n => n[0]).join('')}
+                      {getInitials(member.displayName)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <CardTitle className="text-base truncate">{member.name}</CardTitle>
-                    <CardDescription className="text-xs truncate">{member.role}</CardDescription>
+                    <CardTitle className="text-base truncate">{member.displayName}</CardTitle>
+                    <CardDescription className="text-xs truncate">
+                      {member.uniqueUserId}
+                    </CardDescription>
                   </div>
                 </div>
-                <Badge variant={member.status === "active" ? "default" : "secondary"}>
-                  {member.status === "active" ? "Active" : "On Leave"}
+                <Badge variant={member.isActive ? "default" : "secondary"}>
+                  {member.isActive ? "Active" : "Inactive"}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Mail className="h-4 w-4" />
+                <Mail className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">{member.email}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Phone className="h-4 w-4" />
-                <span>{member.phone}</span>
               </div>
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" size="sm" className="flex-1" data-testid={`button-view-${member.id}`}>
+                  <UserCheck className="h-4 w-4 mr-2" />
                   View Details
                 </Button>
               </div>
@@ -100,14 +145,6 @@ export default function TeamMembers() {
           </Card>
         ))}
       </div>
-
-      {teamMembers.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">No team members assigned yet</p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

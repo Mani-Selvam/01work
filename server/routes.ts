@@ -3474,6 +3474,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Team Leader: Get correction requests for team members
+  app.get("/api/corrections/team/:teamLeaderId", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const teamLeaderId = parseInt(req.params.teamLeaderId);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      // Verify the requesting user is the team leader
+      if (requestingUserId !== teamLeaderId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Get team member IDs
+      const teamMembers = await storage.getTeamMembersByLeader(teamLeaderId);
+      const teamMemberIds = teamMembers.map(m => m.id);
+      
+      // Get all corrections for the company
+      const allCorrections = await storage.getPendingCorrectionRequests(requestingUser.companyId);
+      
+      // Filter to only team members' corrections
+      const teamCorrections = allCorrections.filter(corr => teamMemberIds.includes(corr.userId));
+      
+      res.json(teamCorrections);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Team Leader: Approve correction request
+  app.patch("/api/corrections/:id/approve", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const requestId = parseInt(req.params.id);
+      const correctionRequest = await storage.getCorrectionRequestById(requestId);
+      
+      if (!correctionRequest) {
+        return res.status(404).json({ message: "Correction request not found" });
+      }
+      
+      // Verify the user making the correction is from the team
+      const teamMembers = await storage.getTeamMembersByLeader(requestingUserId);
+      const teamMemberIds = teamMembers.map(m => m.id);
+      
+      if (!teamMemberIds.includes(correctionRequest.userId)) {
+        return res.status(403).json({ message: "You can only approve corrections for your team members" });
+      }
+      
+      // Update correction request status
+      const updatedRequest = await storage.updateCorrectionRequest(requestId, {
+        status: 'approved',
+        reviewedBy: requestingUserId,
+        reviewComments: req.body.comments,
+      });
+      
+      // Apply the correction to attendance record
+      if (correctionRequest.attendanceId) {
+        const attendanceUpdate: any = {};
+        if (correctionRequest.requestedCheckIn) {
+          attendanceUpdate.checkIn = correctionRequest.requestedCheckIn;
+        }
+        if (correctionRequest.requestedCheckOut) {
+          attendanceUpdate.checkOut = correctionRequest.requestedCheckOut;
+        }
+        
+        if (attendanceUpdate.checkIn || attendanceUpdate.checkOut) {
+          await storage.updateAttendanceRecord(correctionRequest.attendanceId, attendanceUpdate);
+          
+          // Log the correction
+          await storage.createAttendanceLog({
+            attendanceId: correctionRequest.attendanceId,
+            action: 'correction_applied',
+            performedBy: requestingUserId,
+            newValue: JSON.stringify(correctionRequest),
+          });
+        }
+      }
+      
+      res.json(updatedRequest);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Team Leader: Reject correction request
+  app.patch("/api/corrections/:id/reject", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const requestId = parseInt(req.params.id);
+      const correctionRequest = await storage.getCorrectionRequestById(requestId);
+      
+      if (!correctionRequest) {
+        return res.status(404).json({ message: "Correction request not found" });
+      }
+      
+      // Verify the user making the rejection is from the team
+      const teamMembers = await storage.getTeamMembersByLeader(requestingUserId);
+      const teamMemberIds = teamMembers.map(m => m.id);
+      
+      if (!teamMemberIds.includes(correctionRequest.userId)) {
+        return res.status(403).json({ message: "You can only reject corrections for your team members" });
+      }
+      
+      const updatedRequest = await storage.updateCorrectionRequest(requestId, {
+        status: 'rejected',
+        reviewedBy: requestingUserId,
+        reviewComments: req.body.comments,
+      });
+      
+      res.json(updatedRequest);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // Admin: Get pending correction requests
   app.get("/api/admin/attendance/corrections/pending", requireAdmin, async (req, res, next) => {
     try {
