@@ -1,7 +1,7 @@
 ﻿import { db } from "./db";
 import { 
   companies, users, tasks, reports, messages, ratings, fileUploads, archiveReports, groupMessages, taskTimeLogs, feedbacks, slotPricing, companyPayments, passwordResetTokens, adminActivityLogs, badges, autoTasks, leaves, holidays, tasksReports,
-  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs,
+  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments,
   type Company, type InsertCompany,
   type User, type InsertUser,
   type Task, type InsertTask,
@@ -29,6 +29,7 @@ import {
   type CorrectionRequest, type InsertCorrectionRequest,
   type Reward, type InsertReward,
   type AttendanceLog, type InsertAttendanceLog,
+  type TeamAssignment, type InsertTeamAssignment,
 } from "@shared/schema";
 import { eq, and, or, desc, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -270,6 +271,13 @@ export interface IStorage {
   
   // NEW ATTENDANCE SYSTEM - Attendance Logs (Audit Trail)
   createAttendanceLog(log: InsertAttendanceLog): Promise<AttendanceLog>;
+  
+  // Team Assignment operations
+  createTeamAssignment(assignment: InsertTeamAssignment): Promise<TeamAssignment>;
+  removeTeamAssignment(teamLeaderId: number, memberId: number): Promise<void>;
+  getTeamMembersByLeader(teamLeaderId: number): Promise<User[]>;
+  getTeamLeaderByMember(memberId: number): Promise<User | null>;
+  getAllTeamAssignments(companyId: number): Promise<TeamAssignment[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -1606,6 +1614,62 @@ export class DbStorage implements IStorage {
     }
     
     return markedCount;
+  }
+  
+  // Team Assignment Management
+  async createTeamAssignment(assignment: InsertTeamAssignment): Promise<TeamAssignment> {
+    const result = await db.insert(teamAssignments).values(assignment).returning();
+    return result[0];
+  }
+  
+  async removeTeamAssignment(teamLeaderId: number, memberId: number): Promise<void> {
+    await db.update(teamAssignments)
+      .set({ removedAt: new Date() })
+      .where(and(
+        eq(teamAssignments.teamLeaderId, teamLeaderId),
+        eq(teamAssignments.memberId, memberId),
+        sql`${teamAssignments.removedAt} IS NULL`
+      ));
+  }
+  
+  async getTeamMembersByLeader(teamLeaderId: number): Promise<User[]> {
+    const assignments = await db.select({
+      user: users
+    })
+    .from(teamAssignments)
+    .innerJoin(users, eq(teamAssignments.memberId, users.id))
+    .where(and(
+      eq(teamAssignments.teamLeaderId, teamLeaderId),
+      sql`${teamAssignments.removedAt} IS NULL`,
+      eq(users.isActive, true)
+    ));
+    
+    return assignments.map(a => a.user);
+  }
+  
+  async getTeamLeaderByMember(memberId: number): Promise<User | null> {
+    const assignment = await db.select({
+      leader: users
+    })
+    .from(teamAssignments)
+    .innerJoin(users, eq(teamAssignments.teamLeaderId, users.id))
+    .where(and(
+      eq(teamAssignments.memberId, memberId),
+      sql`${teamAssignments.removedAt} IS NULL`,
+      eq(users.isActive, true)
+    ))
+    .limit(1);
+    
+    return assignment[0]?.leader || null;
+  }
+  
+  async getAllTeamAssignments(companyId: number): Promise<TeamAssignment[]> {
+    return await db.select().from(teamAssignments)
+      .where(and(
+        eq(teamAssignments.companyId, companyId),
+        sql`${teamAssignments.removedAt} IS NULL`
+      ))
+      .orderBy(desc(teamAssignments.assignedAt));
   }
 }
 

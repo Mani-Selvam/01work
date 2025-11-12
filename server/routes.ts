@@ -872,6 +872,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Assignment routes
+  app.post("/api/team-assignments", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
+        return res.status(403).json({ message: "Only admins can assign team members" });
+      }
+
+      const { teamLeaderId, memberIds } = req.body;
+      
+      if (!teamLeaderId || !memberIds || !Array.isArray(memberIds)) {
+        return res.status(400).json({ message: "Team leader ID and member IDs are required" });
+      }
+
+      const teamLeader = await storage.getUserById(teamLeaderId);
+      if (!teamLeader) {
+        return res.status(404).json({ message: "Team leader not found" });
+      }
+
+      // Validate team leader role
+      if (teamLeader.role !== 'team_leader') {
+        return res.status(400).json({ message: "User must have team_leader role to be assigned members" });
+      }
+
+      // Company scoping
+      if (requestingUser.role !== 'super_admin' && teamLeader.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get existing assignments to avoid duplicates
+      const existingMembers = await storage.getTeamMembersByLeader(teamLeaderId);
+      const existingMemberIds = new Set(existingMembers.map(m => m.id));
+
+      const assignments = [];
+      const skipped = [];
+      
+      for (const memberId of memberIds) {
+        // Skip if already assigned (either previously or earlier in this request)
+        if (existingMemberIds.has(memberId)) {
+          skipped.push(memberId);
+          continue;
+        }
+
+        const member = await storage.getUserById(memberId);
+        if (!member) {
+          continue;
+        }
+
+        // Verify member is in same company
+        if (member.companyId !== teamLeader.companyId) {
+          continue;
+        }
+
+        const assignment = await storage.createTeamAssignment({
+          teamLeaderId,
+          memberId,
+          companyId: teamLeader.companyId as number,
+        });
+        assignments.push(assignment);
+        
+        // Add to set to prevent duplicate assignments within same request
+        existingMemberIds.add(memberId);
+      }
+
+      res.json({ 
+        message: "Team members assigned successfully", 
+        assignments,
+        skipped: skipped.length > 0 ? `${skipped.length} members were already assigned` : undefined
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/team-assignments/:teamLeaderId/members", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const teamLeaderId = parseInt(req.params.teamLeaderId);
+      const teamLeader = await storage.getUserById(teamLeaderId);
+      
+      if (!teamLeader) {
+        return res.status(404).json({ message: "Team leader not found" });
+      }
+
+      // Company scoping: ensure team leader is in same company (except super_admin)
+      if (requestingUser.role !== 'super_admin' && teamLeader.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Additional role-based access control
+      if (requestingUser.role !== 'super_admin' && 
+          requestingUser.role !== 'company_admin' &&
+          requestingUser.id !== teamLeaderId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const members = await storage.getTeamMembersByLeader(teamLeaderId);
+      res.json(members);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/team-assignments/:teamLeaderId/members/:memberId", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
+        return res.status(403).json({ message: "Only admins can remove team assignments" });
+      }
+
+      const teamLeaderId = parseInt(req.params.teamLeaderId);
+      const memberId = parseInt(req.params.memberId);
+
+      // Verify team leader exists and is in same company
+      const teamLeader = await storage.getUserById(teamLeaderId);
+      if (!teamLeader) {
+        return res.status(404).json({ message: "Team leader not found" });
+      }
+
+      // Company scoping: ensure team leader is in same company (except super_admin)
+      if (requestingUser.role !== 'super_admin' && teamLeader.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await storage.removeTeamAssignment(teamLeaderId, memberId);
+      res.json({ message: "Team member removed successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/team-assignments", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
+        return res.status(403).json({ message: "Only admins can view team assignments" });
+      }
+
+      const companyId = requestingUser.companyId as number;
+      const assignments = await storage.getAllTeamAssignments(companyId);
+      res.json(assignments);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Company routes (Super Admin only)
   app.post("/api/companies", async (req, res, next) => {
     try {

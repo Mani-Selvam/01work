@@ -335,6 +335,17 @@ export const attendanceLogs = pgTable("attendance_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const teamAssignments = pgTable("team_assignments", {
+  id: serial("id").primaryKey(),
+  teamLeaderId: integer("team_leader_id").references(() => users.id).notNull(),
+  memberId: integer("member_id").references(() => users.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  removedAt: timestamp("removed_at"),
+}, (table) => ({
+  uniqueAssignment: sql`UNIQUE (team_leader_id, member_id, company_id, COALESCE(removed_at, '1970-01-01'))`,
+}));
+
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
   serverId: true,
@@ -670,3 +681,11 @@ export const insertAttendanceLogSchema = createInsertSchema(attendanceLogs).omit
 
 export type InsertAttendanceLog = z.infer<typeof insertAttendanceLogSchema>;
 export type AttendanceLog = typeof attendanceLogs.$inferSelect;
+
+export const insertTeamAssignmentSchema = createInsertSchema(teamAssignments).omit({
+  id: true,
+  assignedAt: true,
+});
+
+export type InsertTeamAssignment = z.infer<typeof insertTeamAssignmentSchema>;
+export type TeamAssignment = typeof teamAssignments.$inferSelect;

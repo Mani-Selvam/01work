@@ -1,0 +1,142 @@
+STRUCTURE PLAN
+🎯 Goal
+
+Use existing Admin codebase for the Team Leader side,
+just clone, rename routes/components, and apply data & permission filters.
+
+🏢 ADMIN SIDE (Already Exists)
+
+Your existing Admin sections:
+
+Dashboard
+Company Profile
+Company Settings
+Payment History
+Users
+Team Leaders
+Reports
+Tasks
+Messages
+Ratings
+Feedback
+Leave Approval
+Correction Requests
+Attendance Monitor
+Attendance Reports
+Attendance Policy
+Holiday Management
+
+
+✅ All these are already completed and working.
+
+👨‍🏫 TEAM LEADER SIDE (Clone from Admin Code)
+
+You will clone the Admin modules that are reusable,
+then make small modifications like:
+
+restrict data scope to leader’s team only
+
+remove company-level settings
+
+rename navigation (team-[teamId])
+
+allow Check-in / Check-out like user
+
+🔁 CLONE PLAN
+Admin Module	Team Leader Version	Changes / Notes
+🏠 Dashboard	✅ Clone	Filter to show only leader’s team (team attendance, tasks, leave)
+👥 Users	❌ Skip	Not needed — leader can’t manage all users
+👨‍💼 Team Leaders	❌ Skip	Only admin can manage team leaders
+🧾 Tasks	✅ Clone	Keep same UI, but only list and assign to team members
+🌴 Leave Approval	✅ Clone	Filter to only members in leader’s team
+🕐 Correction Requests	✅ Clone	Same form, team-only filter
+👁️ Attendance Monitor	✅ Clone	Show only team members + leader attendance
+📜 Attendance Reports	✅ Clone	Team-wise report only
+📊 Reports	✅ Clone	Only “Team Report” tab visible
+💬 Messages	✅ Clone	Limit scope: send to team + admin only
+📣 Announcements	✅ Clone	Leader can post team announcements only
+⭐ Ratings	✅ Clone	Leader rates team members only
+💬 Feedback	✅ Clone	View team feedback only
+📋 Attendance Policy	❌ Skip	Admin only
+🎉 Holiday Management	❌ Skip	Admin only
+⚙️ Company Settings	❌ Skip	Admin only
+🏢 Company Profile	❌ Skip	Admin only
+💳 Payment History	❌ Skip	Admin only
+👁️ Attendance (Self)	➕ Add	Team Leader must check-in / check-out like employee
+🧭 TEAM LEADER FINAL MENU STRUCTURE (after clone)
+Section	Description
+🏠 Dashboard	Team overview (members, attendance, tasks, leave)
+👥 Team Members	View employees under leader
+🧾 Tasks	Assign/manage team tasks
+🌴 Leave Management	Approve/reject team leaves
+🕐 Correction Requests	Approve corrections for team
+⏰ Attendance (Self)	Check-in / Check-out
+👁️ Team Attendance Monitor	View live attendance
+📜 Attendance History	Self + team history
+📊 Reports	Team reports only
+💬 Messages / Team Messages	Chat with team & admin
+📣 Announcements	Team announcements
+⭐ Ratings	Rate team members
+💬 Feedback	View team feedback
+📈 View Reports	Team summary view
+🔄 WORKFLOW FLOW
+
+Admin Creates Team Leader
+
+(name, email, password, role)
+
+After creation → popup: assign members to that leader.
+
+Team Leader Login
+
+Login same as user
+
+Redirect: /team-[teamId]/dashboard
+
+Team Leader Access
+
+Uses same UI as admin but with team filters
+
+Can Check-in / Check-out like employee
+
+Can view & control team attendance, leave, tasks
+
+Admin Side Visibility
+
+Admin can see:
+
+Team Leader’s attendance
+
+Team reports
+
+Today’s completed tasks (leader + members)
+
+Announcements by team or by member
+
+Reports Split
+
+Admin Report → all company data
+
+Team Report → per team (same code filtered by team_id)
+
+⚙️ IMPLEMENTATION GUIDELINES (Summary)
+Task	Action
+UI Components	Copy from Admin folder → create Team folder
+Routing	Replace /admin/... → /team-[teamId]/...
+API Calls	Use same endpoints but with teamId filter (backend restricts access)
+Auth	Same login page, redirect based on role = “team_leader”
+Sidebar	Use same structure as admin, hide non-accessible sections
+Attendance	Use existing employee attendance API (team leader acts like user)
+Reports	Use existing admin report page, filter by teamId
+Permissions	Add role: "team_leader" in your middleware / context
+
+✅ Result
+
+No need to rewrite modules.
+
+Just reuse (clone) Admin components and logic,
+apply team-based filters and hide restricted settings.
+
+Team Leader becomes a “mini-admin” with personal attendance tracking.
+
+Admin sees everything, including team leader activity and reports.
