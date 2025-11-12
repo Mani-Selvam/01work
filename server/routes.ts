@@ -795,7 +795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const adminCount = users.filter(u => u.role === 'company_admin').length;
-        const memberCount = users.filter(u => u.role === 'company_member').length;
+        const memberCount = users.filter(u => u.role === 'company_member' || u.role === 'team_leader').length;
 
         if (validatedData.role === 'company_admin' && adminCount >= company.maxAdmins) {
           return res.status(400).json({ 
@@ -803,9 +803,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        if (validatedData.role === 'company_member' && memberCount >= company.maxMembers) {
+        // Team leaders and members count against maxMembers limit
+        if ((validatedData.role === 'company_member' || validatedData.role === 'team_leader') && memberCount >= company.maxMembers) {
           return res.status(400).json({ 
-            message: `Member slots full. Current: ${memberCount}/${company.maxMembers}. Please upgrade your plan.` 
+            message: `Member slots full (includes team leaders). Current: ${memberCount}/${company.maxMembers}. Please upgrade your plan.` 
           });
         }
 
@@ -1521,7 +1522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const users = await storage.getUsersByCompanyId(requestingUser.companyId);
       const adminCount = users.filter(u => u.role === 'company_admin').length;
-      const memberCount = users.filter(u => u.role === 'company_member').length;
+      const memberCount = users.filter(u => u.role === 'company_member' || u.role === 'team_leader').length;
 
       res.json({
         ...company,
@@ -1954,6 +1955,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      const receiverUser = await storage.getUserById(req.body.receiverId);
+      if (!receiverUser) {
+        return res.status(404).json({ message: "Receiver not found" });
+      }
+
+      // Same-company check: ensure both users belong to the same company
+      if (requestingUser.companyId !== receiverUser.companyId && requestingUser.role !== 'super_admin') {
+        return res.status(403).json({ message: "Cannot send messages across different companies" });
+      }
+
+      // Authorization: Team leaders can message their team members, employees can reply to their team leader
+      if (requestingUser.role === 'team_leader') {
+        // Team leader sending to employee - check if receiver is in their team
+        const teamMembers = await storage.getTeamMembersByLeader(requestingUser.id);
+        const teamMemberIds = teamMembers.map(m => m.id);
+        if (!teamMemberIds.includes(receiverUser.id)) {
+          return res.status(403).json({ message: "You can only message your team members" });
+        }
+      } else if (requestingUser.role === 'company_member') {
+        // Employee replying to team leader - check if sender is their team leader
+        const teamAssignments = await storage.getTeamAssignmentsByMemberId(requestingUser.id);
+        const leaderIds = teamAssignments.map(t => t.teamLeaderId);
+        if (!leaderIds.includes(receiverUser.id) || receiverUser.role !== 'team_leader') {
+          return res.status(403).json({ message: "You can only reply to your team leader" });
+        }
+      } else if (requestingUser.role !== 'super_admin' && requestingUser.role !== 'company_admin') {
+        return res.status(403).json({ message: "Unauthorized to send messages" });
+      }
+
       const messageData = {
         senderId: requestingUser.id,
         receiverId: req.body.receiverId,
@@ -1964,6 +1994,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedMessage = insertMessageSchema.parse(messageData);
       const message = await storage.createMessage(validatedMessage);
+      
+      // Broadcast new message via WebSocket
+      const { broadcast } = await import('./index.js');
+      broadcast({
+        type: 'NEW_MESSAGE',
+        data: {
+          ...message,
+          senderName: requestingUser.displayName,
+          receiverName: receiverUser.displayName,
+        }
+      });
+      
       res.json(message);
     } catch (error) {
       next(error);

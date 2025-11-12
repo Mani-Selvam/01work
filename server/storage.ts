@@ -279,6 +279,7 @@ export interface IStorage {
   getTeamMembersByLeader(teamLeaderId: number): Promise<User[]>;
   getTeamLeaderByMember(memberId: number): Promise<User | null>;
   getAllTeamAssignments(companyId: number): Promise<TeamAssignment[]>;
+  getTeamAssignmentsByMemberId(memberId: number): Promise<TeamAssignment[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -1084,7 +1085,7 @@ export class DbStorage implements IStorage {
     const [suspendedCompaniesResult] = await db.select({ count: sql<number>`count(*)` }).from(companies).where(eq(companies.isActive, false));
     const [totalUsersResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(eq(users.isActive, true));
     const [totalAdminsResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.isActive, true), eq(users.role, 'company_admin')));
-    const [totalMembersResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.isActive, true), eq(users.role, 'company_member')));
+    const [totalMembersResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.isActive, true), or(eq(users.role, 'company_member'), eq(users.role, 'team_leader'))));
     const [totalTasksResult] = await db.select({ count: sql<number>`count(*)` }).from(tasks);
     const [totalPaymentsResult] = await db.select({ count: sql<number>`count(*)` }).from(companyPayments);
     const [totalRevenueResult] = await db.select({ total: sql<number>`COALESCE(SUM(amount), 0)` }).from(companyPayments).where(eq(companyPayments.paymentStatus, 'paid'));
@@ -1123,7 +1124,7 @@ export class DbStorage implements IStorage {
 
     const [userCountResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.companyId, companyId), eq(users.isActive, true)));
     const [adminCountResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.companyId, companyId), eq(users.isActive, true), eq(users.role, 'company_admin')));
-    const [memberCountResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.companyId, companyId), eq(users.isActive, true), eq(users.role, 'company_member')));
+    const [memberCountResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.companyId, companyId), eq(users.isActive, true), or(eq(users.role, 'company_member'), eq(users.role, 'team_leader'))));
     const [taskCountResult] = await db.select({ count: sql<number>`count(*)` }).from(tasks).where(eq(tasks.companyId, companyId));
     const [paymentCountResult] = await db.select({ count: sql<number>`count(*)` }).from(companyPayments).where(eq(companyPayments.companyId, companyId));
     const [revenueResult] = await db.select({ total: sql<number>`COALESCE(SUM(amount), 0)` }).from(companyPayments).where(and(eq(companyPayments.companyId, companyId), eq(companyPayments.paymentStatus, 'paid')));
@@ -1151,7 +1152,7 @@ export class DbStorage implements IStorage {
       allCompanies.map(async (company) => {
         const [userCountResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.companyId, company.id), eq(users.isActive, true)));
         const [adminCountResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.companyId, company.id), eq(users.isActive, true), eq(users.role, 'company_admin')));
-        const [memberCountResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.companyId, company.id), eq(users.isActive, true), eq(users.role, 'company_member')));
+        const [memberCountResult] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.companyId, company.id), eq(users.isActive, true), or(eq(users.role, 'company_member'), eq(users.role, 'team_leader'))));
 
         return {
           company,
@@ -1699,6 +1700,15 @@ export class DbStorage implements IStorage {
     return await db.select().from(teamAssignments)
       .where(and(
         eq(teamAssignments.companyId, companyId),
+        sql`${teamAssignments.removedAt} IS NULL`
+      ))
+      .orderBy(desc(teamAssignments.assignedAt));
+  }
+  
+  async getTeamAssignmentsByMemberId(memberId: number): Promise<TeamAssignment[]> {
+    return await db.select().from(teamAssignments)
+      .where(and(
+        eq(teamAssignments.memberId, memberId),
         sql`${teamAssignments.removedAt} IS NULL`
       ))
       .orderBy(desc(teamAssignments.assignedAt));
