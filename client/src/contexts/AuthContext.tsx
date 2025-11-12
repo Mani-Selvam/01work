@@ -5,8 +5,9 @@ interface User {
   email: string;
   displayName: string;
   photoURL?: string | null;
-  role: "super_admin" | "company_admin" | "company_member";
+  role: "super_admin" | "company_admin" | "company_member" | "team_leader";
   companyId?: number | null;
+  teamMemberIds?: number[];
 }
 
 interface AuthContextType {
@@ -16,11 +17,11 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, displayName: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  userRole: "super_admin" | "company_admin" | "company_member" | null;
+  userRole: "super_admin" | "company_admin" | "company_member" | "team_leader" | null;
   dbUserId: number | null;
   companyId: number | null;
   setUser: (user: User | null) => void;
-  setUserRole: (role: "super_admin" | "company_admin" | "company_member" | null) => void;
+  setUserRole: (role: "super_admin" | "company_admin" | "company_member" | "team_leader" | null) => void;
   setDbUserId: (id: number | null) => void;
   setCompanyId: (id: number | null) => void;
 }
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [userRole, setUserRole] = useState<"super_admin" | "company_admin" | "company_member" | null>(null);
+  const [userRole, setUserRole] = useState<"super_admin" | "company_admin" | "company_member" | "team_leader" | null>(null);
   const [dbUserId, setDbUserId] = useState<number | null>(null);
   const [companyId, setCompanyId] = useState<number | null>(null);
 

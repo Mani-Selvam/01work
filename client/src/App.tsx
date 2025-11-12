@@ -14,6 +14,7 @@ import CompanyRegistration from "@/pages/CompanyRegistration";
 import EmailVerification from "@/pages/EmailVerification";
 import UserLayout from "@/components/UserLayout";
 import AdminLayout from "@/components/AdminLayout";
+import TeamLeaderLayout from "@/components/TeamLeaderLayout";
 import Overview from "@/pages/user/Overview";
 import Reports from "@/pages/user/Reports";
 import Messages from "@/pages/user/Messages";
@@ -45,8 +46,9 @@ import PaymentHistory from "@/pages/admin/PaymentHistory";
 import SuperAdminDashboard from "@/pages/super-admin/SuperAdminDashboard";
 import PaymentTracking from "@/pages/super-admin/PaymentTracking";
 import ActivityLogs from "@/pages/super-admin/ActivityLogs";
+import TeamLeaderDashboard from "@/pages/team-leader/TeamLeaderDashboard";
 
-function ProtectedRoute({ component: Component, allowedRole }: { component: any; allowedRole?: "admin" | "user" | "super_admin" }) {
+function ProtectedRoute({ component: Component, allowedRole }: { component: any; allowedRole?: "admin" | "user" | "super_admin" | "team_leader" }) {
   const { user, loading, userRole } = useAuth();
 
   if (loading) {
@@ -67,15 +69,32 @@ function ProtectedRoute({ component: Component, allowedRole }: { component: any;
   const isSuperAdmin = userRole === "super_admin";
   const isCompanyAdmin = userRole === "company_admin";
   const isUser = userRole === "company_member";
+  const isTeamLeader = userRole === "team_leader";
 
   if (allowedRole === "super_admin" && !isSuperAdmin) {
     if (isCompanyAdmin) {
       return <Redirect to="/admin" />;
     }
+    if (isTeamLeader) {
+      return <Redirect to="/team-leader" />;
+    }
     return <Redirect to="/user" />;
   }
 
   if (allowedRole === "admin" && !isCompanyAdmin && !isSuperAdmin) {
+    if (isTeamLeader) {
+      return <Redirect to="/team-leader" />;
+    }
+    return <Redirect to="/user" />;
+  }
+
+  if (allowedRole === "team_leader" && !isTeamLeader) {
+    if (isSuperAdmin) {
+      return <Redirect to="/super-admin" />;
+    }
+    if (isCompanyAdmin) {
+      return <Redirect to="/admin" />;
+    }
     return <Redirect to="/user" />;
   }
 
@@ -83,18 +102,34 @@ function ProtectedRoute({ component: Component, allowedRole }: { component: any;
     if (isSuperAdmin) {
       return <Redirect to="/super-admin" />;
     }
-    return <Redirect to="/admin" />;
+    if (isCompanyAdmin) {
+      return <Redirect to="/admin" />;
+    }
+    if (isTeamLeader) {
+      return <Redirect to="/team-leader" />;
+    }
   }
 
   return <Component />;
 }
 
 function Router() {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
+
+  const getDefaultRoute = () => {
+    if (!user) return null;
+    if (userRole === "super_admin") return "/super-admin/dashboard";
+    if (userRole === "company_admin") return "/admin/dashboard";
+    if (userRole === "team_leader") return "/team-leader/dashboard";
+    if (userRole === "company_member") return "/user/overview";
+    return "/admin/dashboard";
+  };
+
+  const defaultRoute = getDefaultRoute();
 
   return (
     <Switch>
-      <Route path="/" component={user ? () => <Redirect to="/admin" /> : LandingPage} />
+      <Route path="/" component={user && defaultRoute ? () => <Redirect to={defaultRoute} /> : LandingPage} />
       <Route path="/register" component={CompanyRegistration} />
       <Route path="/verify" component={EmailVerification} />
       <Route path="/login/admin" component={LoginPage} />
@@ -205,6 +240,12 @@ function Router() {
       </Route>
       <Route path="/super-admin">
         <Redirect to="/super-admin/dashboard" />
+      </Route>
+      <Route path="/team-leader/dashboard">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderDashboard /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader">
+        <Redirect to="/team-leader/dashboard" />
       </Route>
       <Route>
         <div className="min-h-screen flex items-center justify-center bg-background">
