@@ -1848,7 +1848,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Message routes
   app.post("/api/messages", async (req, res, next) => {
     try {
-      const validatedMessage = insertMessageSchema.parse(req.body);
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const messageData = {
+        senderId: requestingUser.id,
+        receiverId: req.body.receiverId,
+        message: req.body.message,
+        relatedTaskId: req.body.relatedTaskId,
+        readStatus: false,
+      };
+
+      const validatedMessage = insertMessageSchema.parse(messageData);
       const message = await storage.createMessage(validatedMessage);
       res.json(message);
     } catch (error) {
@@ -1884,9 +1902,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const messages = await storage.getAllMessages();
         res.json(messages);
       } else {
-        // Default to showing requesting user's own messages
-        const messages = await storage.getMessagesByReceiverId(requestingUser.id);
-        res.json(messages);
+        // Return all messages where user is either sender or receiver
+        const allMessages = await storage.getAllMessages();
+        const userMessages = allMessages.filter(
+          msg => msg.senderId === requestingUser.id || msg.receiverId === requestingUser.id
+        );
+        res.json(userMessages);
       }
     } catch (error) {
       next(error);
