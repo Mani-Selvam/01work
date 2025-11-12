@@ -577,8 +577,8 @@ export default function Users() {
                   <SelectItem value="company_admin" disabled={!canAddAdmin}>
                     Admin {!canAddAdmin && `(${adminSlots?.available}/${adminSlots?.max} slots)`}
                   </SelectItem>
-                  <SelectItem value="team_leader" disabled={!canAddAdmin}>
-                    Team Leader {!canAddAdmin && `(${adminSlots?.available}/${adminSlots?.max} slots)`}
+                  <SelectItem value="team_leader" disabled={!canAddMember}>
+                    Team Leader {!canAddMember && `(${memberSlots?.available}/${memberSlots?.max} slots)`}
                   </SelectItem>
                   <SelectItem value="company_member" disabled={!canAddMember}>
                     Member {!canAddMember && `(${memberSlots?.available}/${memberSlots?.max} slots)`}
@@ -601,6 +601,7 @@ export default function Users() {
                 !userForm.password || 
                 createUserMutation.isPending ||
                 (userForm.role === 'company_admin' && !canAddAdmin) ||
+                (userForm.role === 'team_leader' && !canAddMember) ||
                 (userForm.role === 'company_member' && !canAddMember)
               }
               data-testid="button-submit-add-user"
