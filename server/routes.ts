@@ -989,6 +989,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get team attendance for today
+  app.get("/api/team-assignments/:teamLeaderId/attendance/today", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const teamLeaderId = parseInt(req.params.teamLeaderId);
+      const teamLeader = await storage.getUserById(teamLeaderId);
+      
+      if (!teamLeader) {
+        return res.status(404).json({ message: "Team leader not found" });
+      }
+
+      // Company scoping: ensure team leader is in same company (except super_admin)
+      if (requestingUser.role !== 'super_admin' && teamLeader.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Additional role-based access control
+      if (requestingUser.role !== 'super_admin' && 
+          requestingUser.role !== 'company_admin' &&
+          requestingUser.id !== teamLeaderId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get team members
+      const members = await storage.getTeamMembersByLeader(teamLeaderId);
+      const memberIds = members.map(m => m.id);
+
+      // Get today's attendance for all team members
+      const today = new Date().toISOString().split('T')[0];
+      if (!teamLeader.companyId) {
+        return res.json([]);
+      }
+      
+      const allAttendance = await storage.getDailyAttendance(teamLeader.companyId, today);
+      const teamAttendance = allAttendance.filter(record => memberIds.includes(record.userId));
+      
+      res.json(teamAttendance);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.delete("/api/team-assignments/:teamLeaderId/members/:memberId", async (req, res, next) => {
     try {
       const requestingUserId = req.headers['x-user-id'];
