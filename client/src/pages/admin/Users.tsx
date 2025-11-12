@@ -8,13 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@shared/schema";
-import { Plus, Users as UsersIcon, Copy, CheckCircle } from "lucide-react";
+import { Plus, Users as UsersIcon, Copy, CheckCircle, Users2, Search } from "lucide-react";
 
 interface CompanyData {
   id: number;
@@ -32,6 +33,10 @@ export default function Users() {
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
+  const [teamAssignmentDialogOpen, setTeamAssignmentDialogOpen] = useState(false);
+  const [selectedTeamLeader, setSelectedTeamLeader] = useState<User | null>(null);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<number>>(new Set());
   const [createdUserCredentials, setCreatedUserCredentials] = useState<{
     email: string;
     password: string;
@@ -59,6 +64,17 @@ export default function Users() {
   const { data: company } = useQuery<CompanyData>({
     queryKey: ['/api/my-company'],
     enabled: !!companyId && !!dbUserId && userRole === 'company_admin',
+  });
+
+  // Fetch all team assignments to show counts on team leader cards
+  const { data: allTeamAssignments = [] } = useQuery<Array<{ teamLeaderId: number; memberId: number }>>({
+    queryKey: ['/api/team-assignments'],
+    queryFn: async () => {
+      const response = await fetch('/api/team-assignments');
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: userRole === 'company_admin',
   });
 
   const activeUsers = allUsers.filter(u => u.isActive !== false);
@@ -135,11 +151,77 @@ export default function Users() {
       setCredentialsDialogOpen(true);
       queryClient.invalidateQueries({ queryKey: ['/api/users?includeDeleted=true'] });
       queryClient.invalidateQueries({ queryKey: ['/api/my-company'] });
+      
+      // If team leader was created, open team assignment dialog
+      if (data.role === 'team_leader') {
+        setSelectedTeamLeader(data);
+        setTimeout(() => {
+          setCredentialsDialogOpen(false);
+          setTeamAssignmentDialogOpen(true);
+        }, 2000);
+      }
     },
     onError: (error: any) => {
       toast({
         title: "Failed to add user",
         description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Lazy-load team assignments when dialog opens
+  const { data: teamAssignments = [], isLoading: teamAssignmentsLoading } = useQuery<User[]>({
+    queryKey: ['/api/team-assignments', selectedTeamLeader?.id, 'members'],
+    queryFn: async () => {
+      if (!selectedTeamLeader) return [];
+      const response = await fetch(`/api/team-assignments/${selectedTeamLeader.id}/members`);
+      if (!response.ok) throw new Error('Failed to fetch team assignments');
+      return response.json();
+    },
+    enabled: !!selectedTeamLeader && teamAssignmentDialogOpen,
+  });
+
+  // Mutation to assign team members
+  const assignTeamMembersMutation = useMutation({
+    mutationFn: async ({ teamLeaderId, memberIds }: { teamLeaderId: number; memberIds: number[] }) => {
+      return await apiRequest('/api/team-assignments', 'POST', { teamLeaderId, memberIds });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Team members assigned successfully",
+      });
+      setSelectedMemberIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['/api/team-assignments', selectedTeamLeader?.id, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/team-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users?includeDeleted=true'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to assign team members",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to remove team member
+  const removeTeamMemberMutation = useMutation({
+    mutationFn: async ({ teamLeaderId, memberId }: { teamLeaderId: number; memberId: number }) => {
+      return await apiRequest(`/api/team-assignments/${teamLeaderId}/members/${memberId}`, 'DELETE');
+    },
+    onSuccess: () => {
+      toast({
+        title: "Team member removed successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/team-assignments', selectedTeamLeader?.id, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/team-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users?includeDeleted=true'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to remove team member",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -165,6 +247,36 @@ export default function Users() {
 
   const canAddAdmin = !adminSlots || adminSlots.available > 0;
   const canAddMember = !memberSlots || memberSlots.available > 0;
+
+  // Memoized map of team leader ID -> member count
+  const teamMemberCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const assignment of allTeamAssignments) {
+      const current = counts.get(assignment.teamLeaderId) || 0;
+      counts.set(assignment.teamLeaderId, current + 1);
+    }
+    return counts;
+  }, [allTeamAssignments]);
+
+  // Memoized list of assignable company members (excludes admins and team leaders)
+  const assignableMembers = useMemo(() => {
+    return activeUsers.filter(u => u.role === 'company_member');
+  }, [activeUsers]);
+
+  // Memoized filtered list based on search query
+  const filteredAssignableMembers = useMemo(() => {
+    if (!memberSearchQuery.trim()) return assignableMembers;
+    const query = memberSearchQuery.toLowerCase();
+    return assignableMembers.filter(m => 
+      m.displayName.toLowerCase().includes(query) ||
+      m.email.toLowerCase().includes(query)
+    );
+  }, [assignableMembers, memberSearchQuery]);
+
+  // Set of currently assigned member IDs for quick lookup
+  const assignedMemberIds = useMemo(() => {
+    return new Set(teamAssignments.map(m => m.id));
+  }, [teamAssignments]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -235,14 +347,43 @@ export default function Users() {
                       <div className="flex-1 min-w-0 space-y-1">
                         <h4 className="font-semibold text-base truncate">{user.displayName}</h4>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                        <Badge 
-                          variant={user.role === 'company_admin' ? 'default' : 'secondary'} 
-                          className="text-xs mt-1"
-                        >
-                          {user.role.replace('_', ' ')}
-                        </Badge>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge 
+                            variant={user.role === 'company_admin' || user.role === 'team_leader' ? 'default' : 'secondary'} 
+                            className="text-xs mt-1"
+                          >
+                            {user.role.replace('_', ' ')}
+                          </Badge>
+                          {user.role === 'team_leader' && (
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs mt-1"
+                              data-testid={`badge-team-count-${user.id}`}
+                            >
+                              <Users2 className="h-3 w-3 mr-1" />
+                              {teamMemberCounts.get(user.id) || 0} members
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    {user.role === 'team_leader' && (
+                      <div className="flex gap-2 mt-4 pt-3 border-t">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex-1 text-xs h-8"
+                          data-testid={`button-manage-team-${user.id}`}
+                          onClick={() => {
+                            setSelectedTeamLeader(user);
+                            setTeamAssignmentDialogOpen(true);
+                          }}
+                        >
+                          <Users2 className="h-3 w-3 mr-1" />
+                          Manage Team
+                        </Button>
+                      </div>
+                    )}
                     {user.role === 'company_member' && (
                       <div className="flex gap-2 mt-4 pt-3 border-t">
                         <Button 
@@ -436,6 +577,9 @@ export default function Users() {
                   <SelectItem value="company_admin" disabled={!canAddAdmin}>
                     Admin {!canAddAdmin && `(${adminSlots?.available}/${adminSlots?.max} slots)`}
                   </SelectItem>
+                  <SelectItem value="team_leader" disabled={!canAddAdmin}>
+                    Team Leader {!canAddAdmin && `(${adminSlots?.available}/${adminSlots?.max} slots)`}
+                  </SelectItem>
                   <SelectItem value="company_member" disabled={!canAddMember}>
                     Member {!canAddMember && `(${memberSlots?.available}/${memberSlots?.max} slots)`}
                   </SelectItem>
@@ -599,6 +743,185 @@ export default function Users() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Assignment Dialog */}
+      <Dialog open={teamAssignmentDialogOpen} onOpenChange={setTeamAssignmentDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users2 className="h-5 w-5" />
+              Manage Team for {selectedTeamLeader?.displayName}
+            </DialogTitle>
+            <DialogDescription>
+              Assign team members to this team leader. Only company members can be assigned to a team.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Currently Assigned Members */}
+            {teamAssignments.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Currently Assigned Members ({teamAssignments.length})</Label>
+                <div className="space-y-2">
+                  {teamAssignments.map((member) => (
+                    <div 
+                      key={member.id} 
+                      className="flex items-center justify-between p-3 bg-muted rounded-md"
+                      data-testid={`assigned-member-${member.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.photoURL || ''} />
+                          <AvatarFallback className="text-xs">
+                            {member.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{member.displayName}</p>
+                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          if (selectedTeamLeader) {
+                            removeTeamMemberMutation.mutate({ 
+                              teamLeaderId: selectedTeamLeader.id, 
+                              memberId: member.id 
+                            });
+                          }
+                        }}
+                        disabled={removeTeamMemberMutation.isPending}
+                        data-testid={`button-remove-member-${member.id}`}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add New Members */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Add Team Members</Label>
+              
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search members by name or email..."
+                  value={memberSearchQuery}
+                  onChange={(e) => setMemberSearchQuery(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-members"
+                />
+              </div>
+
+              {/* Member List */}
+              {teamAssignmentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : filteredAssignableMembers.length > 0 ? (
+                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-2">
+                  {filteredAssignableMembers.map((member) => {
+                    const isAssigned = assignedMemberIds.has(member.id);
+                    const isSelected = selectedMemberIds.has(member.id);
+                    
+                    return (
+                      <div
+                        key={member.id}
+                        className={`flex items-center gap-3 p-2 rounded-md transition-colors ${
+                          isAssigned ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'
+                        }`}
+                        onClick={() => {
+                          if (!isAssigned) {
+                            const newSet = new Set(selectedMemberIds);
+                            if (isSelected) {
+                              newSet.delete(member.id);
+                            } else {
+                              newSet.add(member.id);
+                            }
+                            setSelectedMemberIds(newSet);
+                          }
+                        }}
+                        data-testid={`member-option-${member.id}`}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={isAssigned}
+                          data-testid={`checkbox-member-${member.id}`}
+                        />
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.photoURL || ''} />
+                          <AvatarFallback className="text-xs">
+                            {member.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{member.displayName}</p>
+                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                        </div>
+                        {isAssigned && (
+                          <Badge variant="secondary" className="text-xs">
+                            Already Assigned
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  {memberSearchQuery.trim() 
+                    ? "No members match your search" 
+                    : "No available members to assign"}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  if (selectedTeamLeader && selectedMemberIds.size > 0) {
+                    assignTeamMembersMutation.mutate({
+                      teamLeaderId: selectedTeamLeader.id,
+                      memberIds: Array.from(selectedMemberIds),
+                    });
+                  }
+                }}
+                disabled={
+                  !selectedTeamLeader || 
+                  selectedMemberIds.size === 0 || 
+                  assignTeamMembersMutation.isPending
+                }
+                className="flex-1"
+                data-testid="button-assign-members"
+              >
+                {assignTeamMembersMutation.isPending 
+                  ? "Assigning..." 
+                  : `Assign Selected (${selectedMemberIds.size})`}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setTeamAssignmentDialogOpen(false);
+                  setSelectedTeamLeader(null);
+                  setSelectedMemberIds(new Set());
+                  setMemberSearchQuery("");
+                }}
+                data-testid="button-close-team-dialog"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
