@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@shared/schema";
-import { Plus, Users as UsersIcon, Copy, CheckCircle, Users2, Search } from "lucide-react";
+import { Plus, Users as UsersIcon, Copy, CheckCircle, Users2, Search, MoreVertical, Eye, Trash2 } from "lucide-react";
 
 interface CompanyData {
   id: number;
@@ -34,7 +35,9 @@ export default function Users() {
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [teamAssignmentDialogOpen, setTeamAssignmentDialogOpen] = useState(false);
+  const [userDetailsDialogOpen, setUserDetailsDialogOpen] = useState(false);
   const [selectedTeamLeader, setSelectedTeamLeader] = useState<User | null>(null);
+  const [selectedUserForDetails, setSelectedUserForDetails] = useState<User | null>(null);
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<number>>(new Set());
   const [createdUserCredentials, setCreatedUserCredentials] = useState<{
@@ -366,6 +369,44 @@ export default function Users() {
                           )}
                         </div>
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            data-testid={`button-user-menu-${user.id}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setSelectedUserForDetails(user);
+                              setUserDetailsDialogOpen(true);
+                            }}
+                            data-testid={`menu-view-details-${user.id}`}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          {(user.role === 'company_member' || user.role === 'team_leader') && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => deleteUserMutation.mutate(user.id)}
+                                disabled={deleteUserMutation.isPending}
+                                data-testid={`menu-remove-user-${user.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Remove
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                     {user.role === 'team_leader' && (
                       <div className="flex gap-2 mt-4 pt-3 border-t">
@@ -923,6 +964,135 @@ export default function Users() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Details Dialog */}
+      <Dialog open={userDetailsDialogOpen} onOpenChange={setUserDetailsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              View user information
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUserForDetails && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 pb-4 border-b">
+                <Avatar className="h-16 w-16 ring-2 ring-primary/20">
+                  <AvatarImage src={selectedUserForDetails.photoURL || ''} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
+                    {selectedUserForDetails.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedUserForDetails.displayName}</h3>
+                  <Badge 
+                    variant={selectedUserForDetails.role === 'company_admin' || selectedUserForDetails.role === 'team_leader' ? 'default' : 'secondary'}
+                  >
+                    {selectedUserForDetails.role.replace('_', ' ')}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <div className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md">
+                    <p className="text-sm font-mono" data-testid="text-detail-email">
+                      {selectedUserForDetails.email}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(selectedUserForDetails.email, 'Email')}
+                      className="h-7"
+                    >
+                      {copiedField === 'Email' ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">User ID</Label>
+                  <div className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md">
+                    <p className="text-sm font-mono" data-testid="text-detail-userid">
+                      {selectedUserForDetails.uniqueUserId}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(selectedUserForDetails.uniqueUserId, 'User ID')}
+                      className="h-7"
+                    >
+                      {copiedField === 'User ID' ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Username</Label>
+                  <div className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md">
+                    <p className="text-sm font-mono" data-testid="text-detail-username">
+                      {selectedUserForDetails.displayName}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(selectedUserForDetails.displayName, 'Username')}
+                      className="h-7"
+                    >
+                      {copiedField === 'Username' ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {selectedUserForDetails.role === 'team_leader' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Team Members</Label>
+                    <div className="p-2 bg-muted rounded-md">
+                      <p className="text-sm font-medium" data-testid="text-detail-team-count">
+                        {teamMemberCounts.get(selectedUserForDetails.id) || 0} members assigned
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                  <AlertDescription className="text-xs text-amber-800 dark:text-amber-200">
+                    <strong>Security Note:</strong> Passwords are encrypted and cannot be displayed for security reasons. Users must use the password set during account creation.
+                  </AlertDescription>
+                </Alert>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setUserDetailsDialogOpen(false);
+                    setSelectedUserForDetails(null);
+                  }}
+                  className="flex-1"
+                  data-testid="button-close-details"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

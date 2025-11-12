@@ -471,7 +471,8 @@ export class DbStorage implements IStorage {
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const uniqueUserId = generateUniqueId('USER');
+    const prefix = user.role === 'team_leader' ? 'TEAM' : 'USER';
+    const uniqueUserId = generateUniqueId(prefix);
     const result = await db.insert(users).values({ ...user, uniqueUserId }).returning();
     return result[0];
   }
