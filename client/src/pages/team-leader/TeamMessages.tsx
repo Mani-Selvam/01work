@@ -54,10 +54,7 @@ export default function TeamMessages() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { receiverId: number; message: string }) => {
-      return await apiRequest('/api/messages', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return await apiRequest('/api/messages', 'POST', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
