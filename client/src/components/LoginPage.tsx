@@ -39,8 +39,11 @@ export default function LoginPage() {
     if (user && userRole) {
       const isAdmin = userRole === "super_admin" || userRole === "company_admin";
       const isUser = userRole === "company_member";
+      const isTeamLeader = userRole === "team_leader";
       if (isAdmin) {
         setLocation("/admin");
+      } else if (isTeamLeader) {
+        setLocation("/team-leader");
       } else if (isUser) {
         setLocation("/user");
       }
