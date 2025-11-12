@@ -217,6 +217,7 @@ export interface IStorage {
   createLeave(leave: InsertLeave): Promise<Leave>;
   getLeavesByUserId(userId: number): Promise<Leave[]>;
   getLeavesByCompanyId(companyId: number): Promise<Leave[]>;
+  getLeavesByUserIds(userIds: number[]): Promise<Leave[]>;
   getPendingLeaves(companyId: number): Promise<Leave[]>;
   updateLeaveStatus(leaveId: number, status: string, approvedBy: number, remarks?: string): Promise<void>;
   getLeaveById(id: number): Promise<Leave | null>;
@@ -1253,6 +1254,36 @@ export class DbStorage implements IStorage {
     }).from(leaves)
       .leftJoin(users, eq(leaves.userId, users.id))
       .where(eq(leaves.companyId, companyId))
+      .orderBy(desc(leaves.createdAt));
+    
+    return results.map(r => ({
+      ...r,
+      appliedDate: r.createdAt,
+    }));
+  }
+
+  async getLeavesByUserIds(userIds: number[]): Promise<any[]> {
+    if (userIds.length === 0) {
+      return [];
+    }
+    
+    const results = await db.select({
+      id: leaves.id,
+      userId: leaves.userId,
+      companyId: leaves.companyId,
+      leaveType: leaves.leaveType,
+      startDate: leaves.startDate,
+      endDate: leaves.endDate,
+      reason: leaves.reason,
+      status: leaves.status,
+      approvedBy: leaves.approvedBy,
+      remarks: leaves.remarks,
+      createdAt: leaves.createdAt,
+      updatedAt: leaves.updatedAt,
+      userName: users.displayName,
+    }).from(leaves)
+      .leftJoin(users, eq(leaves.userId, users.id))
+      .where(inArray(leaves.userId, userIds))
       .orderBy(desc(leaves.createdAt));
     
     return results.map(r => ({

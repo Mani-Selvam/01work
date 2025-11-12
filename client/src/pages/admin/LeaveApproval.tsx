@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Check, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { useCallback } from "react";
 import type { Leave } from "@shared/schema";
 
 type LeaveWithUser = Leave & { userName: string };
@@ -14,6 +16,20 @@ export default function LeaveApproval() {
   const { data: user } = useQuery<any>({
     queryKey: ['/api/me'],
   });
+
+  const handleWebSocketMessage = useCallback((data: any) => {
+    if (data.type === 'LEAVE_STATUS_UPDATE' && data.data.companyId === user?.companyId) {
+      queryClient.invalidateQueries({ queryKey: [`/api/leaves/company/${user?.companyId}`] });
+      const action = data.data.status === 'approved' ? 'approved' : 'rejected';
+      const actionBy = data.data.approvedBy || data.data.rejectedBy;
+      toast({
+        title: "Leave Status Updated",
+        description: `${data.data.userName}'s leave has been ${action} by ${actionBy}`,
+      });
+    }
+  }, [toast, user?.companyId]);
+
+  useWebSocket(handleWebSocketMessage);
 
   const { data: leaves = [], isLoading } = useQuery<LeaveWithUser[]>({
     queryKey: [`/api/leaves/company/${user?.companyId}`],

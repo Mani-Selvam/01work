@@ -2971,15 +2971,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestingUser = await storage.getUserById(requestingUserId);
       const companyId = parseInt(req.params.companyId);
       
-      if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
-        return res.status(403).json({ message: "Only admins can view company leave requests" });
+      if (!requestingUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Allow admins and team leaders
+      if (requestingUser.role !== 'company_admin' && 
+          requestingUser.role !== 'super_admin' && 
+          requestingUser.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied" });
       }
       
+      // Verify company access
       if (requestingUser.role === 'company_admin' && requestingUser.companyId !== companyId) {
         return res.status(403).json({ message: "You can only view leave requests for your own company" });
       }
       
-      const leaves = await storage.getLeavesByCompanyId(companyId);
+      if (requestingUser.role === 'team_leader' && requestingUser.companyId !== companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      let leaves;
+      if (requestingUser.role === 'team_leader') {
+        // Team leaders can only see their team members' leaves
+        const teamMembers = await storage.getTeamMembersByLeader(requestingUserId);
+        const teamMemberIds = teamMembers.map(m => m.id);
+        leaves = await storage.getLeavesByUserIds(teamMemberIds);
+      } else {
+        // Admins can see all company leaves
+        leaves = await storage.getLeavesByCompanyId(companyId);
+      }
+      
       res.json(leaves);
     } catch (error) {
       next(error);
@@ -2992,8 +3014,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestingUser = await storage.getUserById(requestingUserId);
       const leaveId = parseInt(req.params.leaveId);
       
-      if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
-        return res.status(403).json({ message: "Only admins can approve leave requests" });
+      if (!requestingUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Allow admins and team leaders
+      if (requestingUser.role !== 'company_admin' && 
+          requestingUser.role !== 'super_admin' && 
+          requestingUser.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied" });
       }
       
       const leave = await storage.getLeaveById(leaveId);
@@ -3001,11 +3030,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Leave request not found" });
       }
       
-      if (requestingUser.role === 'company_admin' && requestingUser.companyId !== leave.companyId) {
+      // Verify company access
+      if (requestingUser.companyId !== leave.companyId) {
         return res.status(403).json({ message: "You can only approve leave requests for your own company" });
+      }
+
+      // Team leaders can only approve their team members' leaves
+      if (requestingUser.role === 'team_leader') {
+        const teamMembers = await storage.getTeamMembersByLeader(requestingUserId);
+        const teamMemberIds = teamMembers.map(m => m.id);
+        if (!teamMemberIds.includes(leave.userId)) {
+          return res.status(403).json({ message: "You can only approve leave requests for your team members" });
+        }
       }
       
       await storage.updateLeaveStatus(leaveId, 'approved', req.body.approvedBy || requestingUserId);
+      
+      // Broadcast WebSocket update for real-time notifications
+      const { broadcast } = await import('./index.js');
+      const leaveUser = await storage.getUserById(leave.userId);
+      broadcast({
+        type: 'LEAVE_STATUS_UPDATE',
+        data: {
+          leaveId,
+          userId: leave.userId,
+          userName: leaveUser?.displayName,
+          status: 'approved',
+          approvedBy: requestingUser.displayName,
+          companyId: leave.companyId,
+        }
+      });
+      
       res.json({ message: "Leave approved successfully" });
     } catch (error) {
       next(error);
@@ -3018,8 +3073,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestingUser = await storage.getUserById(requestingUserId);
       const leaveId = parseInt(req.params.leaveId);
       
-      if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
-        return res.status(403).json({ message: "Only admins can reject leave requests" });
+      if (!requestingUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Allow admins and team leaders
+      if (requestingUser.role !== 'company_admin' && 
+          requestingUser.role !== 'super_admin' && 
+          requestingUser.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied" });
       }
       
       const leave = await storage.getLeaveById(leaveId);
@@ -3027,11 +3089,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Leave request not found" });
       }
       
-      if (requestingUser.role === 'company_admin' && requestingUser.companyId !== leave.companyId) {
+      // Verify company access
+      if (requestingUser.companyId !== leave.companyId) {
         return res.status(403).json({ message: "You can only reject leave requests for your own company" });
+      }
+
+      // Team leaders can only reject their team members' leaves
+      if (requestingUser.role === 'team_leader') {
+        const teamMembers = await storage.getTeamMembersByLeader(requestingUserId);
+        const teamMemberIds = teamMembers.map(m => m.id);
+        if (!teamMemberIds.includes(leave.userId)) {
+          return res.status(403).json({ message: "You can only reject leave requests for your team members" });
+        }
       }
       
       await storage.updateLeaveStatus(leaveId, 'rejected', req.body.rejectedBy || requestingUserId);
+      
+      // Broadcast WebSocket update for real-time notifications
+      const { broadcast } = await import('./index.js');
+      const leaveUser = await storage.getUserById(leave.userId);
+      broadcast({
+        type: 'LEAVE_STATUS_UPDATE',
+        data: {
+          leaveId,
+          userId: leave.userId,
+          userName: leaveUser?.displayName,
+          status: 'rejected',
+          rejectedBy: requestingUser.displayName,
+          companyId: leave.companyId,
+        }
+      });
+      
       res.json({ message: "Leave rejected successfully" });
     } catch (error) {
       next(error);
