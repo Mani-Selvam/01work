@@ -47,6 +47,16 @@ import SuperAdminDashboard from "@/pages/super-admin/SuperAdminDashboard";
 import PaymentTracking from "@/pages/super-admin/PaymentTracking";
 import ActivityLogs from "@/pages/super-admin/ActivityLogs";
 import TeamLeaderDashboard from "@/pages/team-leader/TeamLeaderDashboard";
+import TeamMembers from "@/pages/team-leader/TeamMembers";
+import TeamTasks from "@/pages/team-leader/TeamTasks";
+import TeamLeaveApproval from "@/pages/team-leader/TeamLeaveApproval";
+import TeamCorrectionRequests from "@/pages/team-leader/TeamCorrectionRequests";
+import TeamLeaderAttendance from "@/pages/team-leader/TeamLeaderAttendance";
+import TeamAttendanceMonitor from "@/pages/team-leader/TeamAttendanceMonitor";
+import TeamAttendanceReports from "@/pages/team-leader/TeamAttendanceReports";
+import TeamMessages from "@/pages/team-leader/TeamMessages";
+import TeamRatings from "@/pages/team-leader/TeamRatings";
+import TeamFeedback from "@/pages/team-leader/TeamFeedback";
 
 function ProtectedRoute({ component: Component, allowedRole }: { component: any; allowedRole?: "admin" | "user" | "super_admin" | "team_leader" }) {
   const { user, loading, userRole } = useAuth();
@@ -243,6 +253,36 @@ function Router() {
       </Route>
       <Route path="/team-leader/dashboard">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderDashboard /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/team">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamMembers /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/tasks">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamTasks /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/leaves">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaveApproval /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/corrections">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamCorrectionRequests /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/attendance">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderAttendance /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/attendance-monitor">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamAttendanceMonitor /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/attendance-reports">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamAttendanceReports /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/messages">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamMessages /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/ratings">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamRatings /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/feedback">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamFeedback /></TeamLeaderLayout>} allowedRole="team_leader" />}
       </Route>
       <Route path="/team-leader">
         <Redirect to="/team-leader/dashboard" />
