@@ -1,0 +1,51 @@
+Completed Tasks (5/18)
+✅ AuthContext Updated - Added team_leader role support with teamMemberIds tracking
+✅ TeamLeaderLayout Rebuilt - Now uses mandated shadcn Sidebar primitives (SidebarProvider, SidebarInset, SidebarTrigger)
+✅ ProtectedRoute Enhanced - Clean role-guard logic for team_leader with proper redirects
+✅ Routes Configured - /team-leader namespace with dashboard route, plus fixed root route to prevent double-redirects
+✅ TeamLeaderDashboard Created - Landing page with KPI cards and navigation structure
+Architecture Highlights
+Compliant Design:
+
+TeamLeaderLayout properly uses shadcn Sidebar primitives (first layout in the app to do so)
+TeamLeaderSidebar built with Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu
+Active state tracking and proper test IDs throughout
+Mobile-responsive with SidebarTrigger and BottomNav
+Smart Routing:
+
+Root route now checks userRole and redirects appropriately:
+super_admin → /super-admin/dashboard
+company_admin → /admin/dashboard
+team_leader → /team-leader/dashboard
+company_member → /user/overview
+No more double-redirects for team leaders
+Remaining Work (13 Tasks)
+Frontend Pages (Tasks 6-15):
+
+Team members list
+Team-scoped: tasks, leaves, corrections, attendance, reports, messages, ratings, feedback
+Backend Integration (Tasks 16-18):
+
+Backend API enforcement for team-scoped data access
+Login flow updates
+End-to-end testing
+
+In progress tasks  5/ 18 
+Update data storage for leaders ✔️
+Add assigning leaders on admin page ✔️
+Create layout for leader access✔️
+Create leader's main control page✔️
+Create page for leader's team members✔️
+Adapt tasks page for leaders
+Adapt leave approval for leaders
+Adapt correction requests for leaders
+Create leader self attendance page
+Adapt attendance monitor for leaders
+Adapt attendance reports for leaders
+Adapt general reports for leaders
+Adapt messages page for leaders
+Adapt ratings page for leaders
+Adapt feedback page for leaders
+Update online connections for filtering
+Update sign-in for leader role
+Update admin view for leader activity
