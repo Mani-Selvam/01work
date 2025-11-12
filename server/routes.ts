@@ -1040,6 +1040,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/team-assignments/:teamLeaderId/attendance/reports", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const teamLeaderId = parseInt(req.params.teamLeaderId);
+      
+      // Verify the requesting user is the team leader
+      if (requestingUser.id !== teamLeaderId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const teamLeader = await storage.getUserById(teamLeaderId);
+      if (!teamLeader || !teamLeader.companyId) {
+        return res.status(404).json({ message: "Team leader not found" });
+      }
+
+      // Get team members
+      const members = await storage.getTeamMembersByLeader(teamLeaderId);
+      
+      // Get date range from query params (default to current month)
+      const now = new Date();
+      const startDate = req.query.startDate as string || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const endDate = req.query.endDate as string || now.toISOString().split('T')[0];
+      
+      // Calculate stats for each team member
+      const memberStats = [];
+      for (const member of members) {
+        const attendanceHistory = await storage.getAttendanceHistory(member.id, startDate, endDate);
+        
+        const presentDays = attendanceHistory.filter(a => a.status === 'present' || a.status === 'late').length;
+        const absentDays = attendanceHistory.filter(a => a.status === 'absent').length;
+        const lateDays = attendanceHistory.filter(a => a.status === 'late').length;
+        
+        // Calculate average working hours
+        const totalMinutes = attendanceHistory
+          .filter(a => a.workDuration)
+          .reduce((sum, a) => sum + (a.workDuration || 0), 0);
+        const avgMinutes = attendanceHistory.length > 0 ? Math.round(totalMinutes / attendanceHistory.length) : 0;
+        const avgHours = avgMinutes > 0 ? `${Math.floor(avgMinutes / 60)}.${Math.round((avgMinutes % 60) / 6)}h` : '0h';
+        
+        // Determine trend (compare to previous period)
+        const previousStartDate = new Date(new Date(startDate).getTime() - (new Date(endDate).getTime() - new Date(startDate).getTime()));
+        const previousEndDate = startDate;
+        const previousHistory = await storage.getAttendanceHistory(member.id, previousStartDate.toISOString().split('T')[0], previousEndDate);
+        
+        const currentAttendanceRate = attendanceHistory.length > 0 ? (presentDays / attendanceHistory.length) : 0;
+        const previousAttendanceRate = previousHistory.length > 0 ? (previousHistory.filter(a => a.status === 'present' || a.status === 'late').length / previousHistory.length) : 0;
+        
+        let trend = 'stable';
+        if (currentAttendanceRate > previousAttendanceRate + 0.05) trend = 'up';
+        if (currentAttendanceRate < previousAttendanceRate - 0.05) trend = 'down';
+        
+        memberStats.push({
+          id: member.id,
+          name: member.displayName,
+          presentDays,
+          absentDays,
+          lateDays,
+          avgHours,
+          trend,
+        });
+      }
+      
+      // Calculate overall team stats
+      const totalPresent = memberStats.reduce((sum, m) => sum + m.presentDays, 0);
+      const totalRecords = memberStats.reduce((sum, m) => sum + m.presentDays + m.absentDays, 0);
+      const attendanceRate = totalRecords > 0 ? ((totalPresent / totalRecords) * 100).toFixed(1) : '0.0';
+      
+      const totalLate = memberStats.reduce((sum, m) => sum + m.lateDays, 0);
+      
+      // Calculate average working hours
+      const allAvgHours = memberStats.map(m => {
+        const hours = parseFloat(m.avgHours.replace('h', ''));
+        return isNaN(hours) ? 0 : hours;
+      });
+      const overallAvgHours = allAvgHours.length > 0 ? (allAvgHours.reduce((a, b) => a + b, 0) / allAvgHours.length).toFixed(1) : '0.0';
+      
+      res.json({
+        teamAttendanceRate: attendanceRate,
+        avgWorkingHours: `${overallAvgHours}h`,
+        lateArrivals: totalLate,
+        memberStats,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.delete("/api/team-assignments/:teamLeaderId/members/:memberId", async (req, res, next) => {
     try {
       const requestingUserId = req.headers['x-user-id'];
@@ -2209,6 +2305,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const companyFeedbacks = allFeedbacks.filter(f => companyUserIds.includes(f.userId));
             res.json(companyFeedbacks);
           }
+        } else if (requestingUser.role === 'team_leader') {
+          // Team leaders can view feedback from their team members
+          const teamMembers = await storage.getTeamMembersByLeader(requestingUser.id);
+          const teamMemberIds = teamMembers.map(m => m.id);
+          const allFeedbacks = await storage.getAllFeedbacks();
+          const teamFeedbacks = allFeedbacks.filter(f => teamMemberIds.includes(f.userId));
+          res.json(teamFeedbacks);
         } else {
           // Regular users can only see their own feedbacks
           const feedbacks = await storage.getFeedbacksByUserId(requestingUser.id);

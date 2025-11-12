@@ -2,37 +2,70 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+
+interface TeamMemberStat {
+  id: number;
+  name: string;
+  presentDays: number;
+  absentDays: number;
+  lateDays: number;
+  avgHours: string;
+  trend: string;
+}
+
+interface AttendanceReportData {
+  teamAttendanceRate: string;
+  avgWorkingHours: string;
+  lateArrivals: number;
+  memberStats: TeamMemberStat[];
+}
 
 export default function TeamAttendanceReports() {
-  const teamStats = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      presentDays: 20,
-      absentDays: 2,
-      lateDays: 1,
-      avgHours: "8.5h",
-      trend: "up",
-    },
-    {
-      id: 2,
-      name: "Mike Chen",
-      presentDays: 21,
-      absentDays: 1,
-      lateDays: 0,
-      avgHours: "8.3h",
-      trend: "stable",
-    },
-    {
-      id: 3,
-      name: "Emily Rodriguez",
-      presentDays: 18,
-      absentDays: 4,
-      lateDays: 2,
-      avgHours: "7.8h",
-      trend: "down",
-    },
-  ];
+  const { dbUserId } = useAuth();
+  const [period, setPeriod] = useState<string>("month");
+
+  const getDateRange = (periodType: string) => {
+    const now = new Date();
+    let startDate: string, endDate: string;
+
+    switch (periodType) {
+      case "week":
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+        startDate = weekAgo.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case "quarter":
+        const quarter = Math.floor(now.getMonth() / 3);
+        const quarterStart = new Date(now.getFullYear(), quarter * 3, 1);
+        startDate = quarterStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case "year":
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        startDate = yearStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      default: // month
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = monthStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+    }
+
+    return { startDate, endDate };
+  };
+
+  const { startDate, endDate } = getDateRange(period);
+
+  const { data: reportData, isLoading } = useQuery<AttendanceReportData>({
+    queryKey: [`/api/team-assignments/${dbUserId}/attendance/reports`, { startDate, endDate }],
+    enabled: !!dbUserId,
+  });
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
@@ -42,6 +75,42 @@ export default function TeamAttendanceReports() {
     }
   };
 
+  const handleExport = () => {
+    if (!reportData) return;
+    
+    const csv = [
+      ['Name', 'Present Days', 'Absent Days', 'Late Days', 'Avg Hours', 'Trend'].join(','),
+      ...reportData.memberStats.map(m => 
+        [m.name, m.presentDays, m.absentDays, m.lateDays, m.avgHours, m.trend].join(',')
+      )
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `team-attendance-report-${startDate}-${endDate}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <Skeleton className="h-10 w-48 mb-2" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+        </div>
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -50,7 +119,7 @@ export default function TeamAttendanceReports() {
           <p className="text-muted-foreground">View team attendance analytics and trends</p>
         </div>
         <div className="flex gap-2">
-          <Select defaultValue="month">
+          <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-40" data-testid="select-report-period">
               <SelectValue />
             </SelectTrigger>
@@ -61,7 +130,7 @@ export default function TeamAttendanceReports() {
               <SelectItem value="year">This Year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" data-testid="button-download-report">
+          <Button variant="outline" onClick={handleExport} data-testid="button-download-report">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -74,8 +143,10 @@ export default function TeamAttendanceReports() {
             <CardTitle className="text-sm font-medium">Team Attendance Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">91.3%</div>
-            <p className="text-xs text-muted-foreground mt-1">+2.4% from last month</p>
+            <div className="text-2xl font-bold" data-testid="stat-attendance-rate">
+              {reportData?.teamAttendanceRate || '0.0'}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Overall performance</p>
           </CardContent>
         </Card>
         <Card>
@@ -83,7 +154,9 @@ export default function TeamAttendanceReports() {
             <CardTitle className="text-sm font-medium">Avg Working Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8.2h</div>
+            <div className="text-2xl font-bold" data-testid="stat-avg-hours">
+              {reportData?.avgWorkingHours || '0h'}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Per team member</p>
           </CardContent>
         </Card>
@@ -92,8 +165,10 @@ export default function TeamAttendanceReports() {
             <CardTitle className="text-sm font-medium">Late Arrivals</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
+            <div className="text-2xl font-bold" data-testid="stat-late-arrivals">
+              {reportData?.lateArrivals || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Total instances</p>
           </CardContent>
         </Card>
       </div>
@@ -103,32 +178,38 @@ export default function TeamAttendanceReports() {
           <CardTitle>Team Member Statistics</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-2 font-medium">Name</th>
-                  <th className="text-left py-3 px-2 font-medium">Present</th>
-                  <th className="text-left py-3 px-2 font-medium">Absent</th>
-                  <th className="text-left py-3 px-2 font-medium">Late</th>
-                  <th className="text-left py-3 px-2 font-medium">Avg Hours</th>
-                  <th className="text-left py-3 px-2 font-medium">Trend</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teamStats.map((member) => (
-                  <tr key={member.id} className="border-b last:border-0" data-testid={`report-row-${member.id}`}>
-                    <td className="py-3 px-2 font-medium">{member.name}</td>
-                    <td className="py-3 px-2 text-green-600">{member.presentDays}</td>
-                    <td className="py-3 px-2 text-red-600">{member.absentDays}</td>
-                    <td className="py-3 px-2 text-orange-600">{member.lateDays}</td>
-                    <td className="py-3 px-2">{member.avgHours}</td>
-                    <td className="py-3 px-2">{getTrendIcon(member.trend)}</td>
+          {!reportData || reportData.memberStats.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground">No attendance data available for this period</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-2 font-medium">Name</th>
+                    <th className="text-left py-3 px-2 font-medium">Present</th>
+                    <th className="text-left py-3 px-2 font-medium">Absent</th>
+                    <th className="text-left py-3 px-2 font-medium">Late</th>
+                    <th className="text-left py-3 px-2 font-medium">Avg Hours</th>
+                    <th className="text-left py-3 px-2 font-medium">Trend</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {reportData.memberStats.map((member) => (
+                    <tr key={member.id} className="border-b last:border-0" data-testid={`report-row-${member.id}`}>
+                      <td className="py-3 px-2 font-medium">{member.name}</td>
+                      <td className="py-3 px-2 text-green-600">{member.presentDays}</td>
+                      <td className="py-3 px-2 text-red-600">{member.absentDays}</td>
+                      <td className="py-3 px-2 text-orange-600">{member.lateDays}</td>
+                      <td className="py-3 px-2">{member.avgHours}</td>
+                      <td className="py-3 px-2">{getTrendIcon(member.trend)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

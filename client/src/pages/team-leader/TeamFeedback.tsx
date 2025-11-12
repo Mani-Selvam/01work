@@ -3,62 +3,134 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useMemo } from "react";
+
+interface Feedback {
+  id: number;
+  userId: number;
+  message: string;
+  createdAt: string;
+}
+
+interface TeamMember {
+  id: number;
+  displayName: string;
+  email: string;
+}
+
+interface ExtendedFeedback extends Feedback {
+  displayName?: string;
+}
 
 export default function TeamFeedback() {
-  const feedbackList = [
-    {
-      id: 1,
-      from: "Sarah Johnson",
-      avatar: "",
-      type: "positive",
-      subject: "Great work on Q4 report",
-      message: "The quarterly report was well-structured and insightful. Keep up the good work!",
-      date: "2024-12-11",
-      status: "read",
-    },
-    {
-      id: 2,
-      from: "Mike Chen",
-      avatar: "",
-      type: "suggestion",
-      subject: "Design workflow improvement",
-      message: "I think we could improve our design review process by adding a checklist template.",
-      date: "2024-12-10",
-      status: "unread",
-    },
-    {
-      id: 3,
-      from: "Emily Rodriguez",
-      avatar: "",
-      type: "concern",
-      subject: "Documentation clarity",
-      message: "Some of the API documentation could be clearer. Would appreciate more examples.",
-      date: "2024-12-09",
-      status: "read",
-    },
-  ];
+  const { dbUserId, companyId } = useAuth();
+  const [selectedType, setSelectedType] = useState<string | null>(null);
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "positive":
-        return <ThumbsUp className="h-4 w-4 text-green-600" />;
-      case "concern":
-        return <ThumbsDown className="h-4 w-4 text-red-600" />;
-      default:
-        return <MessageSquare className="h-4 w-4 text-blue-600" />;
+  const { data: teamMembers = [], isLoading: loadingMembers } = useQuery<TeamMember[]>({
+    queryKey: [`/api/team-assignments/${dbUserId}/members`],
+    enabled: !!dbUserId,
+  });
+
+  const { data: allFeedbacks = [], isLoading: loadingFeedbacks } = useQuery<Feedback[]>({
+    queryKey: [`/api/feedbacks`],
+    enabled: !!companyId,
+  });
+
+  const teamMemberIds = teamMembers.map(m => m.id);
+  const teamFeedbackList: ExtendedFeedback[] = allFeedbacks
+    .filter(feedback => teamMemberIds.includes(feedback.userId))
+    .map(feedback => {
+      const member = teamMembers.find(m => m.id === feedback.userId);
+      return {
+        ...feedback,
+        displayName: member?.displayName,
+      };
+    });
+
+  const feedbackStats = useMemo(() => {
+    const positive = teamFeedbackList.filter(f => 
+      f.message.toLowerCase().includes('great') || 
+      f.message.toLowerCase().includes('excellent') ||
+      f.message.toLowerCase().includes('good job') ||
+      f.message.toLowerCase().includes('well done')
+    ).length;
+    
+    const concern = teamFeedbackList.filter(f => 
+      f.message.toLowerCase().includes('concern') || 
+      f.message.toLowerCase().includes('issue') ||
+      f.message.toLowerCase().includes('problem')
+    ).length;
+    
+    const suggestion = teamFeedbackList.length - positive - concern;
+    
+    return { positive, concern, suggestion };
+  }, [teamFeedbackList]);
+
+  const getTypeIcon = (message: string) => {
+    const lowerMessage = message.toLowerCase();
+    if (lowerMessage.includes('great') || lowerMessage.includes('excellent') || 
+        lowerMessage.includes('good job') || lowerMessage.includes('well done')) {
+      return <ThumbsUp className="h-4 w-4 text-green-600" />;
     }
+    if (lowerMessage.includes('concern') || lowerMessage.includes('issue') || 
+        lowerMessage.includes('problem')) {
+      return <ThumbsDown className="h-4 w-4 text-red-600" />;
+    }
+    return <MessageSquare className="h-4 w-4 text-blue-600" />;
   };
 
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case "positive":
-        return <Badge variant="default" className="bg-green-600">Positive</Badge>;
-      case "concern":
-        return <Badge variant="destructive">Concern</Badge>;
-      default:
-        return <Badge variant="default">Suggestion</Badge>;
+  const getTypeBadge = (message: string) => {
+    const lowerMessage = message.toLowerCase();
+    if (lowerMessage.includes('great') || lowerMessage.includes('excellent') || 
+        lowerMessage.includes('good job') || lowerMessage.includes('well done')) {
+      return <Badge variant="default" className="bg-green-600">Positive</Badge>;
     }
+    if (lowerMessage.includes('concern') || lowerMessage.includes('issue') || 
+        lowerMessage.includes('problem')) {
+      return <Badge variant="destructive">Concern</Badge>;
+    }
+    return <Badge variant="default">Suggestion</Badge>;
   };
+
+  const filteredFeedbackList = selectedType 
+    ? teamFeedbackList.filter(f => {
+        const lowerMessage = f.message.toLowerCase();
+        if (selectedType === 'positive') {
+          return lowerMessage.includes('great') || lowerMessage.includes('excellent') || 
+                 lowerMessage.includes('good job') || lowerMessage.includes('well done');
+        }
+        if (selectedType === 'concern') {
+          return lowerMessage.includes('concern') || lowerMessage.includes('issue') || 
+                 lowerMessage.includes('problem');
+        }
+        return !lowerMessage.includes('great') && !lowerMessage.includes('excellent') && 
+               !lowerMessage.includes('good job') && !lowerMessage.includes('well done') &&
+               !lowerMessage.includes('concern') && !lowerMessage.includes('issue') && 
+               !lowerMessage.includes('problem');
+      })
+    : teamFeedbackList;
+
+  if (loadingMembers || loadingFeedbacks) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <Skeleton className="h-10 w-48 mb-2" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+        </div>
+        <div className="space-y-4">
+          {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -74,65 +146,74 @@ export default function TeamFeedback() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate"
+          onClick={() => setSelectedType(selectedType === 'positive' ? null : 'positive')}
+          data-testid="card-filter-positive"
+        >
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Positive</CardTitle>
             <ThumbsUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
+            <div className="text-2xl font-bold" data-testid="stat-positive">{feedbackStats.positive}</div>
+            <p className="text-xs text-muted-foreground mt-1">Team feedback</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate"
+          onClick={() => setSelectedType(selectedType === 'suggestion' ? null : 'suggestion')}
+          data-testid="card-filter-suggestion"
+        >
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Suggestions</CardTitle>
             <MessageSquare className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
+            <div className="text-2xl font-bold" data-testid="stat-suggestions">{feedbackStats.suggestion}</div>
+            <p className="text-xs text-muted-foreground mt-1">Team feedback</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate"
+          onClick={() => setSelectedType(selectedType === 'concern' ? null : 'concern')}
+          data-testid="card-filter-concern"
+        >
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Concerns</CardTitle>
             <ThumbsDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
+            <div className="text-2xl font-bold" data-testid="stat-concerns">{feedbackStats.concern}</div>
+            <p className="text-xs text-muted-foreground mt-1">Team feedback</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4">
-        {feedbackList.map((feedback) => (
+        {filteredFeedbackList.map((feedback) => (
           <Card key={feedback.id} data-testid={`card-feedback-${feedback.id}`}>
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <Avatar>
-                    <AvatarImage src={feedback.avatar} />
+                    <AvatarImage src="" />
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {feedback.from.split(' ').map(n => n[0]).join('')}
+                      {feedback.displayName?.split(' ').map(n => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      {getTypeIcon(feedback.type)}
-                      <CardTitle className="text-base">{feedback.subject}</CardTitle>
+                      {getTypeIcon(feedback.message)}
+                      <CardTitle className="text-base">Feedback from {feedback.displayName || 'Team Member'}</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      From {feedback.from} • {new Date(feedback.date).toLocaleDateString()}
+                      {new Date(feedback.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {getTypeBadge(feedback.type)}
-                  {feedback.status === "unread" && (
-                    <Badge variant="secondary">Unread</Badge>
-                  )}
+                  {getTypeBadge(feedback.message)}
                 </div>
               </div>
             </CardHeader>
@@ -151,10 +232,12 @@ export default function TeamFeedback() {
         ))}
       </div>
 
-      {feedbackList.length === 0 && (
+      {filteredFeedbackList.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">No feedback received yet</p>
+            <p className="text-muted-foreground" data-testid="text-no-feedback">
+              {selectedType ? `No ${selectedType} feedback found` : 'No feedback received yet'}
+            </p>
           </CardContent>
         </Card>
       )}
