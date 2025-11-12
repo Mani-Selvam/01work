@@ -6,9 +6,10 @@ import { Send, MessageSquare } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/hooks/use-websocket";
 
 interface TeamMember {
   id: number;
@@ -40,17 +41,31 @@ export default function TeamMessages() {
   const { toast } = useToast();
   const [selectedMember, setSelectedMember] = useState<number | null>(null);
   const [messageText, setMessageText] = useState("");
+  const { lastMessage } = useWebSocket();
 
   const { data: teamMembers = [], isLoading: loadingMembers } = useQuery<TeamMember[]>({
     queryKey: [`/api/team-assignments/${dbUserId}/members`],
     enabled: !!dbUserId,
   });
 
-  const { data: allMessages = [], isLoading: loadingMessages } = useQuery<Message[]>({
+  const { data: allMessages = [], isLoading: loadingMessages, refetch: refetchMessages } = useQuery<Message[]>({
     queryKey: ['/api/messages'],
     enabled: !!dbUserId,
-    refetchInterval: 5000,
   });
+
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'NEW_MESSAGE') {
+      refetchMessages();
+      
+      const messageData = lastMessage.data;
+      if (messageData.receiverId === dbUserId) {
+        toast({
+          title: "New Message",
+          description: `${messageData.senderName}: ${messageData.message.substring(0, 50)}${messageData.message.length > 50 ? '...' : ''}`,
+        });
+      }
+    }
+  }, [lastMessage, dbUserId, refetchMessages, toast]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { receiverId: number; message: string }) => {

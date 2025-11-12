@@ -1,14 +1,44 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import MessageCard from "@/components/MessageCard";
-import type { Message } from "@shared/schema";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Send, MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/hooks/use-websocket";
+
+interface Message {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  message: string;
+  readStatus: boolean;
+  createdAt: string;
+}
+
+interface TeamLeader {
+  id: number;
+  displayName: string;
+  email: string;
+  photoURL?: string;
+}
 
 export default function Messages() {
   const { dbUserId } = useAuth();
+  const { toast } = useToast();
+  const [messageText, setMessageText] = useState("");
+  const { lastMessage } = useWebSocket();
 
-  const { data: messages = [], isLoading } = useQuery<Message[]>({
-    queryKey: ['/api/messages', dbUserId],
+  const { data: allMessages = [], isLoading: loadingMessages, refetch: refetchMessages } = useQuery<Message[]>({
+    queryKey: ['/api/messages'],
+    enabled: !!dbUserId,
+  });
+
+  const { data: teamLeaderInfo, isLoading: loadingLeader } = useQuery<TeamLeader | null>({
+    queryKey: [`/api/team-leader`],
     queryFn: async () => {
       const user = localStorage.getItem('user');
       const userId = user ? JSON.parse(user).id : null;
@@ -17,37 +47,89 @@ export default function Messages() {
         headers["x-user-id"] = userId.toString();
       }
       
-      const res = await fetch(`/api/messages?receiverId=${dbUserId}`, { headers, credentials: "include" });
-      if (!res.ok) throw new Error('Failed to fetch messages');
-      return res.json();
+      const res = await fetch(`/api/users/${dbUserId}`, { headers, credentials: "include" });
+      if (!res.ok) throw new Error('Failed to fetch user info');
+      const userData = await res.json();
+      
+      const leadersRes = await fetch(`/api/users?companyId=${userData.companyId}&role=team_leader`, { headers, credentials: "include" });
+      if (!leadersRes.ok) return null;
+      const leaders: TeamLeader[] = await leadersRes.json();
+      
+      const conversationMessages = allMessages.filter(
+        msg => msg.senderId === dbUserId || msg.receiverId === dbUserId
+      );
+      
+      const leaderWithConversation = leaders.find(leader =>
+        conversationMessages.some(msg => msg.senderId === leader.id || msg.receiverId === leader.id)
+      );
+      
+      return leaderWithConversation || leaders[0] || null;
     },
-    enabled: !!dbUserId,
+    enabled: !!dbUserId && !loadingMessages,
   });
 
-  const markAsReadMutation = useMutation({
-    mutationFn: async (messageId: number) => {
-      const user = localStorage.getItem('user');
-      const userId = user ? JSON.parse(user).id : null;
-      const headers: Record<string, string> = {};
-      if (userId) {
-        headers["x-user-id"] = userId.toString();
-      }
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'NEW_MESSAGE') {
+      refetchMessages();
       
-      const res = await fetch(`/api/messages/${messageId}/read`, {
-        method: 'PATCH',
-        headers,
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to mark message as read');
+      const messageData = lastMessage.data;
+      if (messageData.receiverId === dbUserId) {
+        toast({
+          title: "New Message",
+          description: `${messageData.senderName}: ${messageData.message.substring(0, 50)}${messageData.message.length > 50 ? '...' : ''}`,
+        });
+      }
+    }
+  }, [lastMessage, dbUserId, refetchMessages, toast]);
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (data: { receiverId: number; message: string }) => {
+      return await apiRequest('/api/messages', 'POST', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/messages', dbUserId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      setMessageText("");
+      toast({
+        title: "Success",
+        description: "Message sent successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message",
+        variant: "destructive",
+      });
     },
   });
 
-  const unreadCount = messages.filter(m => !m.readStatus).length;
+  const conversationMessages = teamLeaderInfo
+    ? allMessages
+        .filter(
+          msg => (msg.senderId === teamLeaderInfo.id && msg.receiverId === dbUserId) ||
+                 (msg.senderId === dbUserId && msg.receiverId === teamLeaderInfo.id)
+        )
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    : [];
 
-  if (isLoading) {
+  const unreadCount = conversationMessages.filter(
+    msg => msg.senderId === teamLeaderInfo?.id && !msg.readStatus
+  ).length;
+
+  const handleSendMessage = () => {
+    if (!teamLeaderInfo || !messageText.trim()) return;
+    
+    sendMessageMutation.mutate({
+      receiverId: teamLeaderInfo.id,
+      message: messageText.trim(),
+    });
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  if (loadingMessages || loadingLeader) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -64,25 +146,99 @@ export default function Messages() {
         </p>
       </div>
 
-      {messages.length > 0 ? (
-        <div className="space-y-3">
-          {messages.map(msg => (
-            <MessageCard
-              key={msg.id}
-              id={String(msg.id)}
-              message={msg.message}
-              timestamp={new Date(msg.createdAt)}
-              isRead={msg.readStatus}
-              relatedTask={msg.relatedTaskId ? `Task #${msg.relatedTaskId}` : undefined}
-              onMarkRead={() => markAsReadMutation.mutate(msg.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          No messages yet
-        </div>
-      )}
+      <Card>
+        {teamLeaderInfo ? (
+          <>
+            <CardHeader className="border-b">
+              <div className="flex items-center gap-3">
+                <Avatar>
+                  <AvatarImage src={teamLeaderInfo.photoURL} />
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {getInitials(teamLeaderInfo.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-base">{teamLeaderInfo.displayName}</CardTitle>
+                  <p className="text-sm text-muted-foreground">Your Team Leader</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
+                {conversationMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      No messages yet. Start a conversation!
+                    </p>
+                  </div>
+                ) : (
+                  conversationMessages.map((msg) => {
+                    const isOwn = msg.senderId === dbUserId;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                        data-testid={`message-${msg.id}`}
+                      >
+                        <div
+                          className={`max-w-[70%] ${
+                            isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                          } rounded-md p-3`}
+                        >
+                          <p className="text-sm">{msg.message}</p>
+                          <p
+                            className={`text-xs mt-1 ${
+                              isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                            }`}
+                          >
+                            {new Date(msg.createdAt).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <div className="flex gap-2 pt-4 border-t">
+                <Textarea
+                  placeholder="Type your message..."
+                  className="resize-none"
+                  rows={2}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  data-testid="input-message"
+                />
+                <Button
+                  size="icon"
+                  onClick={handleSendMessage}
+                  disabled={!messageText.trim() || sendMessageMutation.isPending}
+                  data-testid="button-send-message"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </>
+        ) : (
+          <CardContent className="flex flex-col items-center justify-center py-24">
+            <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No team leader assigned</h3>
+            <p className="text-sm text-muted-foreground text-center">
+              You haven't been assigned to a team leader yet
+            </p>
+          </CardContent>
+        )}
+      </Card>
     </div>
   );
 }
