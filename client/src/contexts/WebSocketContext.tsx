@@ -32,6 +32,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     websocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('[WebSocket] Message received:', data.type, data);
         setLastMessage(data);
         
         subscribersRef.current.forEach(handler => {

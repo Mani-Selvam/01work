@@ -117,6 +117,7 @@ async function initializeSuperAdmin() {
     });
 
     broadcast = (message: any) => {
+        console.log(`[WebSocket] Broadcasting to ${wss.clients.size} clients:`, message.type);
         wss.clients.forEach((client) => {
             if (client.readyState === 1) {
                 client.send(JSON.stringify(message));
