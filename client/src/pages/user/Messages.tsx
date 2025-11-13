@@ -70,14 +70,17 @@ export default function Messages() {
 
   useEffect(() => {
     if (lastMessage && lastMessage.type === 'NEW_MESSAGE') {
-      refetchMessages();
-      
       const messageData = lastMessage.data;
-      if (messageData.receiverId === dbUserId) {
-        toast({
-          title: "New Message",
-          description: `${messageData.senderName}: ${messageData.message.substring(0, 50)}${messageData.message.length > 50 ? '...' : ''}`,
-        });
+      
+      if (messageData.senderId === dbUserId || messageData.receiverId === dbUserId) {
+        refetchMessages();
+        
+        if (messageData.receiverId === dbUserId) {
+          toast({
+            title: "New Message",
+            description: `${messageData.senderName}: ${messageData.message.substring(0, 50)}${messageData.message.length > 50 ? '...' : ''}`,
+          });
+        }
       }
     }
   }, [lastMessage, dbUserId, refetchMessages, toast]);

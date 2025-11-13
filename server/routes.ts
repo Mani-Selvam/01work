@@ -2072,9 +2072,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
-      
-      if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
-        return res.status(403).json({ message: "Only admins can rate users" });
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const targetUser = await storage.getUserById(req.body.userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+
+      // Prevent self-rating
+      if (requestingUser.id === req.body.userId) {
+        return res.status(403).json({ message: "You cannot rate yourself" });
+      }
+
+      // Authorization checks
+      if (requestingUser.role === 'team_leader') {
+        // Team leader can only rate their team members (not themselves or other leaders)
+        const teamMembers = await storage.getTeamMembersByLeader(requestingUser.id);
+        const teamMemberIds = teamMembers.map(m => m.id).filter(id => id !== requestingUser.id);
+        if (!teamMemberIds.includes(req.body.userId)) {
+          return res.status(403).json({ message: "You can only rate your team members" });
+        }
+        // Ensure target is a team member, not another leader
+        if (targetUser.role === 'team_leader' || targetUser.role === 'company_admin' || targetUser.role === 'super_admin') {
+          return res.status(403).json({ message: "You can only rate team members" });
+        }
+      } else if (requestingUser.role === 'company_admin') {
+        // Admin can only rate team leaders in their company
+        if (targetUser.companyId !== requestingUser.companyId) {
+          return res.status(403).json({ message: "You can only rate users in your company" });
+        }
+        if (targetUser.role !== 'team_leader') {
+          return res.status(403).json({ message: "You can only rate team leaders" });
+        }
+      } else if (requestingUser.role === 'super_admin') {
+        // Super admin can rate anyone (no additional restrictions)
+        // This is intentional for administrative oversight
+      } else {
+        return res.status(403).json({ message: "You don't have permission to rate users" });
+      }
+
+      // Check for duplicate ratings in the same period
+      const existingRatings = await storage.getRatingsByUserId(req.body.userId);
+      const duplicateRating = existingRatings.find(
+        r => r.period === req.body.period && r.ratedBy === requestingUser.id
+      );
+      if (duplicateRating) {
+        return res.status(409).json({ 
+          message: `You have already rated this user for the ${req.body.period} period` 
+        });
       }
       
       const ratingData = {

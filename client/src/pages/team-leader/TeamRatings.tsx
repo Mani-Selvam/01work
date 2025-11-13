@@ -5,6 +5,7 @@ import { Star, UserX } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import RatingDialog from "@/components/RatingDialog";
 
 interface TeamMember {
   id: number;
@@ -159,6 +160,16 @@ export default function TeamRatings() {
                       )}
                     </div>
                   </div>
+                  <RatingDialog
+                    userId={member.id}
+                    userName={member.displayName}
+                    trigger={
+                      <Button variant="outline" size="sm" data-testid={`button-rate-${member.id}`}>
+                        <Star className="h-4 w-4 mr-2" />
+                        Rate Member
+                      </Button>
+                    }
+                  />
                 </div>
               </CardHeader>
               <CardContent>
