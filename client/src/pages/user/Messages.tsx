@@ -37,35 +37,34 @@ export default function Messages() {
     enabled: !!dbUserId,
   });
 
-  const { data: teamLeaderInfo, isLoading: loadingLeader } = useQuery<TeamLeader | null>({
-    queryKey: [`/api/team-leader`],
+  // Fetch assigned team leader using dedicated endpoint
+  const { data: teamLeaderInfo, isLoading: loadingLeader, error: leaderError } = useQuery<TeamLeader | null>({
+    queryKey: ['/api/team-leader/me'],
     queryFn: async () => {
-      const user = localStorage.getItem('user');
-      const userId = user ? JSON.parse(user).id : null;
-      const headers: Record<string, string> = {};
-      if (userId) {
-        headers["x-user-id"] = userId.toString();
+      const res = await fetch('/api/team-leader/me', {
+        credentials: "include",
+        headers: {
+          'x-user-id': dbUserId?.toString() || '',
+        },
+      });
+      
+      // Handle "NOT_ASSIGNED" case specifically
+      if (res.status === 404) {
+        const body = await res.json().catch(() => ({}));
+        if (body.message === 'NOT_ASSIGNED') {
+          return null;
+        }
+        throw new Error('User not found');
       }
       
-      const res = await fetch(`/api/users/${dbUserId}`, { headers, credentials: "include" });
-      if (!res.ok) throw new Error('Failed to fetch user info');
-      const userData = await res.json();
+      if (!res.ok) {
+        throw new Error('Failed to fetch team leader');
+      }
       
-      const leadersRes = await fetch(`/api/users?companyId=${userData.companyId}&role=team_leader`, { headers, credentials: "include" });
-      if (!leadersRes.ok) return null;
-      const leaders: TeamLeader[] = await leadersRes.json();
-      
-      const conversationMessages = allMessages.filter(
-        msg => msg.senderId === dbUserId || msg.receiverId === dbUserId
-      );
-      
-      const leaderWithConversation = leaders.find(leader =>
-        conversationMessages.some(msg => msg.senderId === leader.id || msg.receiverId === leader.id)
-      );
-      
-      return leaderWithConversation || leaders[0] || null;
+      return res.json();
     },
-    enabled: !!dbUserId && !loadingMessages,
+    enabled: !!dbUserId,
+    retry: false,
   });
 
   useEffect(() => {
@@ -233,11 +232,14 @@ export default function Messages() {
             </CardContent>
           </>
         ) : (
-          <CardContent className="flex flex-col items-center justify-center py-24">
+          <CardContent className="flex flex-col items-center justify-center py-24" data-testid="card-not-assigned">
             <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No team leader assigned</h3>
-            <p className="text-sm text-muted-foreground text-center">
-              You haven't been assigned to a team leader yet
+            <h3 className="text-lg font-medium mb-2" data-testid="text-not-assigned-title">No Team Leader Assigned</h3>
+            <p className="text-sm text-muted-foreground text-center mb-4" data-testid="text-not-assigned-description">
+              You haven't been assigned to a team leader yet.
+            </p>
+            <p className="text-sm text-muted-foreground text-center" data-testid="text-not-assigned-guidance">
+              Contact your administrator to be assigned to a team.
             </p>
           </CardContent>
         )}

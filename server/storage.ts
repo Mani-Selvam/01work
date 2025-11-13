@@ -1721,10 +1721,21 @@ export class DbStorage implements IStorage {
   }
   
   async getAllTeamAssignments(companyId: number): Promise<TeamAssignment[]> {
-    return await db.select().from(teamAssignments)
+    // Join with users table to filter out assignments with inactive members or leaders
+    return await db.select({
+      id: teamAssignments.id,
+      companyId: teamAssignments.companyId,
+      teamLeaderId: teamAssignments.teamLeaderId,
+      memberId: teamAssignments.memberId,
+      assignedAt: teamAssignments.assignedAt,
+      removedAt: teamAssignments.removedAt,
+    })
+      .from(teamAssignments)
+      .innerJoin(users, eq(teamAssignments.memberId, users.id))
       .where(and(
         eq(teamAssignments.companyId, companyId),
-        sql`${teamAssignments.removedAt} IS NULL`
+        sql`${teamAssignments.removedAt} IS NULL`,
+        eq(users.isActive, true)
       ))
       .orderBy(desc(teamAssignments.assignedAt));
   }

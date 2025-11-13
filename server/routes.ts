@@ -735,6 +735,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get the assigned team leader for the current user
+  app.get("/api/team-leader/me", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers['x-user-id'] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Only company members can use this endpoint
+      if (requestingUser.role !== 'company_member') {
+        return res.status(403).json({ message: "Only company members can view their team leader" });
+      }
+
+      // Get the assigned team leader
+      const teamLeader = await storage.getTeamLeaderByMember(requestingUser.id);
+      
+      if (!teamLeader) {
+        return res.status(404).json({ message: "NOT_ASSIGNED" });
+      }
+
+      // Return minimal leader payload (normalize null photoURL to undefined)
+      const leaderData = {
+        id: teamLeader.id,
+        displayName: teamLeader.displayName,
+        email: teamLeader.email,
+        photoURL: teamLeader.photoURL || undefined,
+      };
+
+      res.json(leaderData);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.patch("/api/users/:id/role", async (req, res, next) => {
     try {
       const requestingUserId = req.headers['x-user-id'];
@@ -2106,22 +2142,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (targetUser.role !== 'team_leader') {
           return res.status(403).json({ message: "You can only rate team leaders" });
         }
-      } else if (requestingUser.role === 'super_admin') {
-        // Super admin can rate anyone (no additional restrictions)
-        // This is intentional for administrative oversight
       } else {
-        return res.status(403).json({ message: "You don't have permission to rate users" });
-      }
-
-      // Check for duplicate ratings in the same period
-      const existingRatings = await storage.getRatingsByUserId(req.body.userId);
-      const duplicateRating = existingRatings.find(
-        r => r.period === req.body.period && r.ratedBy === requestingUser.id
-      );
-      if (duplicateRating) {
-        return res.status(409).json({ 
-          message: `You have already rated this user for the ${req.body.period} period` 
-        });
+        // Super admins are restricted to the same rules as company admins
+        // for least-privilege security. They can only rate team leaders.
+        if (targetUser.role !== 'team_leader') {
+          return res.status(403).json({ message: "You can only rate team leaders" });
+        }
       }
       
       const ratingData = {
@@ -2133,16 +2159,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const validatedRating = insertRatingSchema.parse(ratingData);
-      const rating = await storage.createRating(validatedRating);
       
-      await storage.createMessage({
-        senderId: requestingUser.id,
-        receiverId: validatedRating.userId,
-        message: `You received a new ${validatedRating.period} rating: ${validatedRating.rating}`,
-        readStatus: false,
-      });
-      
-      res.json(rating);
+      try {
+        const rating = await storage.createRating(validatedRating);
+        
+        await storage.createMessage({
+          senderId: requestingUser.id,
+          receiverId: validatedRating.userId,
+          message: `You received a new ${validatedRating.period} rating: ${validatedRating.rating}`,
+          readStatus: false,
+        });
+        
+        res.json(rating);
+      } catch (dbError: any) {
+        // Catch unique constraint violation (PostgreSQL error code 23505)
+        if (dbError.code === '23505' || dbError.message?.includes('unique_rating_per_period')) {
+          return res.status(409).json({ 
+            message: `You have already rated this user for the ${validatedRating.period} period` 
+          });
+        }
+        throw dbError;
+      }
     } catch (error) {
       next(error);
     }
@@ -2163,29 +2200,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId, latest } = req.query;
       
       if (userId && latest === 'true') {
-        const rating = await storage.getLatestRatingByUserId(parseInt(userId as string));
-        // Check if the user belongs to the same company (unless super_admin)
-        if (rating && requestingUser.role !== 'super_admin') {
-          const ratedUser = await storage.getUserById(rating.userId);
-          if (ratedUser && ratedUser.companyId !== requestingUser.companyId) {
-            return res.status(403).json({ message: "Access denied" });
-          }
+        // Verify target user exists and belongs to same company
+        const ratedUser = await storage.getUserById(parseInt(userId as string));
+        if (!ratedUser || ratedUser.companyId !== requestingUser.companyId) {
+          return res.status(403).json({ message: "Access denied" });
         }
+        
+        const rating = await storage.getLatestRatingByUserId(parseInt(userId as string));
         res.json(rating);
       } else if (userId) {
-        const ratings = await storage.getRatingsByUserId(parseInt(userId as string));
-        // Filter by company unless super_admin
-        if (requestingUser.role === 'super_admin') {
-          res.json(ratings);
-        } else {
-          // Verify user is in same company
-          const ratedUser = await storage.getUserById(parseInt(userId as string));
-          if (ratedUser && ratedUser.companyId === requestingUser.companyId) {
-            res.json(ratings);
-          } else {
-            res.json([]);
-          }
+        // Verify target user exists and belongs to same company
+        const ratedUser = await storage.getUserById(parseInt(userId as string));
+        if (!ratedUser || ratedUser.companyId !== requestingUser.companyId) {
+          return res.json([]);
         }
+        
+        const ratings = await storage.getRatingsByUserId(parseInt(userId as string));
+        res.json(ratings);
       } else if (requestingUser.role === 'super_admin') {
         const ratings = await storage.getAllRatings();
         res.json(ratings);

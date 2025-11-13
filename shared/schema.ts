@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, integer, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, integer, serial, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -103,7 +103,9 @@ export const ratings = pgTable("ratings", {
   feedback: text("feedback"),
   period: varchar("period", { length: 20 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueRatingPerPeriod: uniqueIndex("unique_rating_per_period").on(table.userId, table.ratedBy, table.period),
+}));
 
 export const fileUploads = pgTable("file_uploads", {
   id: serial("id").primaryKey(),
