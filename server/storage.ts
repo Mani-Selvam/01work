@@ -1,6 +1,6 @@
 ﻿import { db } from "./db";
 import { 
-  companies, users, tasks, reports, messages, ratings, fileUploads, archiveReports, groupMessages, taskTimeLogs, feedbacks, slotPricing, companyPayments, passwordResetTokens, adminActivityLogs, badges, autoTasks, leaves, holidays, tasksReports,
+  companies, users, tasks, reports, messages, ratings, fileUploads, archiveReports, groupMessages, groupMessageReplies, taskTimeLogs, feedbacks, slotPricing, companyPayments, passwordResetTokens, adminActivityLogs, badges, autoTasks, leaves, holidays, tasksReports,
   shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments,
   type Company, type InsertCompany,
   type User, type InsertUser,
@@ -11,6 +11,7 @@ import {
   type FileUpload, type InsertFileUpload,
   type ArchiveReport,
   type GroupMessage, type InsertGroupMessage,
+  type GroupMessageReply, type InsertGroupMessageReply,
   type TaskTimeLog, type InsertTaskTimeLog,
   type Feedback, type InsertFeedback,
   type SlotPricing, type InsertSlotPricing,
@@ -114,9 +115,14 @@ export interface IStorage {
   
   // Group message operations
   createGroupMessage(message: InsertGroupMessage): Promise<GroupMessage>;
+  getGroupMessageById(id: number): Promise<GroupMessage | null>;
   getAllGroupMessages(): Promise<GroupMessage[]>;
   getGroupMessagesByCompanyId(companyId: number): Promise<GroupMessage[]>;
   getRecentGroupMessages(limit: number): Promise<GroupMessage[]>;
+  
+  // Group message reply operations
+  createGroupMessageReply(reply: InsertGroupMessageReply): Promise<GroupMessageReply>;
+  getGroupMessageReplies(groupMessageId: number): Promise<GroupMessageReply[]>;
   
   // Task time log operations
   getTaskTimeLog(taskId: number, userId: number, date: string): Promise<TaskTimeLog | null>;
@@ -721,6 +727,13 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async getGroupMessageById(id: number): Promise<GroupMessage | null> {
+    const result = await db.select().from(groupMessages)
+      .where(eq(groupMessages.id, id))
+      .limit(1);
+    return result[0] || null;
+  }
+
   async getAllGroupMessages(): Promise<GroupMessage[]> {
     return await db.select().from(groupMessages).orderBy(desc(groupMessages.createdAt));
   }
@@ -735,6 +748,17 @@ export class DbStorage implements IStorage {
     return await db.select().from(groupMessages)
       .orderBy(desc(groupMessages.createdAt))
       .limit(limit);
+  }
+
+  async createGroupMessageReply(reply: InsertGroupMessageReply): Promise<GroupMessageReply> {
+    const result = await db.insert(groupMessageReplies).values(reply).returning();
+    return result[0];
+  }
+
+  async getGroupMessageReplies(groupMessageId: number): Promise<GroupMessageReply[]> {
+    return await db.select().from(groupMessageReplies)
+      .where(eq(groupMessageReplies.groupMessageId, groupMessageId))
+      .orderBy(groupMessageReplies.createdAt);
   }
 
   async getTaskTimeLog(taskId: number, userId: number, date: string): Promise<TaskTimeLog | null> {

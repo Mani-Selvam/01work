@@ -2,7 +2,8 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCompanySchema, insertUserSchema, insertTaskSchema, insertReportSchema, insertMessageSchema, insertRatingSchema, insertFileUploadSchema, insertGroupMessageSchema, insertFeedbackSchema, loginSchema, signupSchema, firebaseSigninSchema, companyRegistrationSchema, companyBasicRegistrationSchema, superAdminLoginSchema, companyAdminLoginSchema, companyUserLoginSchema, insertSlotPricingSchema, insertCompanyPaymentSchema, updatePaymentStatusSchema, slotPurchaseSchema, passwordResetRequestSchema, passwordResetSchema, insertAttendanceRecordSchema, insertCorrectionRequestSchema } from "@shared/schema";
+import { broadcast } from "./index";
+import { insertCompanySchema, insertUserSchema, insertTaskSchema, insertReportSchema, insertMessageSchema, insertRatingSchema, insertFileUploadSchema, insertGroupMessageSchema, insertGroupMessageReplySchema, insertFeedbackSchema, loginSchema, signupSchema, firebaseSigninSchema, companyRegistrationSchema, companyBasicRegistrationSchema, superAdminLoginSchema, companyAdminLoginSchema, companyUserLoginSchema, insertSlotPricingSchema, insertCompanyPaymentSchema, updatePaymentStatusSchema, slotPurchaseSchema, passwordResetRequestSchema, passwordResetSchema, insertAttendanceRecordSchema, insertCorrectionRequestSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { sendReportNotification, sendCompanyServerIdEmail, sendUserIdEmail, sendPasswordResetEmail, sendPaymentConfirmationEmail, sendCompanyVerificationEmail } from "./email";
@@ -2297,6 +2298,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.json([]);
       }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Group message reply routes
+  app.post("/api/group-messages/:messageId/replies", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!requestingUser.isActive) {
+        return res.status(401).json({ message: "User account disabled", code: "USER_INACTIVE" });
+      }
+
+      if (!requestingUser.companyId) {
+        return res.status(403).json({ message: "User must belong to a company" });
+      }
+
+      const messageId = parseInt(req.params.messageId);
+      
+      const groupMessage = await storage.getGroupMessageById(messageId);
+      if (!groupMessage) {
+        return res.status(404).json({ message: "Group message not found" });
+      }
+
+      if (groupMessage.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied: you can only reply to messages in your company" });
+      }
+
+      if (typeof req.body.message !== 'string' || !req.body.message.trim()) {
+        return res.status(400).json({ message: "Reply message must be a non-empty string" });
+      }
+
+      const replyData = {
+        groupMessageId: messageId,
+        senderId: requestingUser.id,
+        message: req.body.message,
+      };
+
+      const validatedReply = insertGroupMessageReplySchema.parse(replyData);
+      const reply = await storage.createGroupMessageReply(validatedReply);
+
+      if (broadcast) {
+        broadcast({
+          type: 'GROUP_MESSAGE_REPLY',
+          reply,
+          groupMessageId: messageId,
+        });
+      }
+
+      res.json(reply);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      next(error);
+    }
+  });
+
+  app.get("/api/group-messages/:messageId/replies", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!requestingUser.isActive) {
+        return res.status(401).json({ message: "User account disabled", code: "USER_INACTIVE" });
+      }
+
+      if (!requestingUser.companyId) {
+        return res.status(403).json({ message: "User must belong to a company" });
+      }
+
+      const messageId = parseInt(req.params.messageId);
+      
+      const groupMessage = await storage.getGroupMessageById(messageId);
+      if (!groupMessage) {
+        return res.status(404).json({ message: "Group message not found" });
+      }
+
+      if (groupMessage.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied: you can only view replies for messages in your company" });
+      }
+
+      const replies = await storage.getGroupMessageReplies(messageId);
+      res.json(replies);
     } catch (error) {
       next(error);
     }
