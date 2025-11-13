@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Check, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import { useCallback } from "react";
 import type { Leave } from "@shared/schema";
 

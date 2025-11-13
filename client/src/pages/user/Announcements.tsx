@@ -7,7 +7,7 @@ import { Megaphone, MessageCircle, Send } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import type { GroupMessage, GroupMessageReply } from "@shared/schema";
 
 function AnnouncementCard({ announcement }: { announcement: GroupMessage }) {

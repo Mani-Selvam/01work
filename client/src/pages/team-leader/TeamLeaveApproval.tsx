@@ -9,7 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useCallback } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 
 interface Leave {
   id: number;
