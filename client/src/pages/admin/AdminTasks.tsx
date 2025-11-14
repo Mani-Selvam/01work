@@ -137,15 +137,15 @@ export default function AdminTasks() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="assign-to">Assign To Team Leader *</Label>
+                  <Label htmlFor="assign-to">Assign To Member *</Label>
                   <Select value={taskForm.assignedTo} onValueChange={(value) => setTaskForm({ ...taskForm, assignedTo: value })}>
                     <SelectTrigger data-testid="select-assign-to">
-                      <SelectValue placeholder="Select team leader" />
+                      <SelectValue placeholder="Select member" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.filter(u => u.role === 'team_leader').map(user => (
+                      {users.filter(u => u.role === 'team_leader' || u.role === 'company_member').map(user => (
                         <SelectItem key={user.id} value={user.id.toString()}>
-                          {user.displayName}
+                          {user.displayName} ({user.role === 'team_leader' ? 'Team Leader' : 'Member'})
                         </SelectItem>
                       ))}
                     </SelectContent>

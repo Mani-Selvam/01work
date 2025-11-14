@@ -31,7 +31,6 @@ interface CompanyData {
 export default function Users() {
   const { toast } = useToast();
   const { dbUserId, companyId, userRole } = useAuth();
-  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [teamAssignmentDialogOpen, setTeamAssignmentDialogOpen] = useState(false);
@@ -47,12 +46,6 @@ export default function Users() {
     displayName: string;
   } | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [ratingForm, setRatingForm] = useState({
-    userId: "",
-    rating: "",
-    feedback: "",
-    period: "weekly",
-  });
   const [userForm, setUserForm] = useState({
     email: "",
     displayName: "",
@@ -106,32 +99,6 @@ export default function Users() {
       toast({
         title: "Failed to remove user",
         description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const createRatingMutation = useMutation({
-    mutationFn: async (ratingData: typeof ratingForm) => {
-      return await apiRequest('/api/ratings', 'POST', {
-        userId: parseInt(ratingData.userId),
-        rating: ratingData.rating,
-        feedback: ratingData.feedback || null,
-        period: ratingData.period,
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Rating submitted successfully",
-      });
-      setRatingForm({ userId: "", rating: "", feedback: "", period: "weekly" });
-      setRatingDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/ratings'] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to submit rating",
-        description: error.message,
         variant: "destructive",
       });
     },
@@ -251,16 +218,6 @@ export default function Users() {
   const canAddAdmin = !adminSlots || adminSlots.available > 0;
   const canAddMember = !memberSlots || memberSlots.available > 0;
 
-  // Memoized map of team leader ID -> member count
-  const teamMemberCounts = useMemo(() => {
-    const counts = new Map<number, number>();
-    for (const assignment of allTeamAssignments) {
-      const current = counts.get(assignment.teamLeaderId) || 0;
-      counts.set(assignment.teamLeaderId, current + 1);
-    }
-    return counts;
-  }, [allTeamAssignments]);
-
   // Memoized list of assignable company members (excludes admins and team leaders)
   const assignableMembers = useMemo(() => {
     return activeUsers.filter(u => u.role === 'company_member');
@@ -357,16 +314,6 @@ export default function Users() {
                           >
                             {user.role.replace('_', ' ')}
                           </Badge>
-                          {user.role === 'team_leader' && (
-                            <Badge 
-                              variant="outline" 
-                              className="text-xs mt-1"
-                              data-testid={`badge-team-count-${user.id}`}
-                            >
-                              <Users2 className="h-3 w-3 mr-1" />
-                              {teamMemberCounts.get(user.id) || 0} members
-                            </Badge>
-                          )}
                         </div>
                       </div>
                       <DropdownMenu>
@@ -381,18 +328,18 @@ export default function Users() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              setSelectedUserForDetails(user);
-                              setUserDetailsDialogOpen(true);
-                            }}
-                            data-testid={`menu-view-details-${user.id}`}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
                           {(user.role === 'company_member' || user.role === 'team_leader') && (
                             <>
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedUserForDetails(user);
+                                  setUserDetailsDialogOpen(true);
+                                }}
+                                data-testid={`menu-view-details-${user.id}`}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
                                 className="text-destructive"
@@ -427,18 +374,6 @@ export default function Users() {
                     )}
                     {user.role === 'company_member' && (
                       <div className="flex gap-2 mt-4 pt-3 border-t">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex-1 text-xs h-8"
-                          data-testid={`button-rate-user-${user.id}`}
-                          onClick={() => {
-                            setRatingForm({ ...ratingForm, userId: user.id.toString() });
-                            setRatingDialogOpen(true);
-                          }}
-                        >
-                          Rate
-                        </Button>
                         <Button 
                           variant="ghost" 
                           size="sm" 
@@ -497,72 +432,6 @@ export default function Users() {
           </CardContent>
         </Card>
       )}
-
-      <Dialog open={ratingDialogOpen} onOpenChange={setRatingDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rate User</DialogTitle>
-            <DialogDescription>
-              Provide feedback and rating for the selected user
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="rating-period">Period</Label>
-              <Select 
-                value={ratingForm.period} 
-                onValueChange={(value) => setRatingForm({ ...ratingForm, period: value })}
-              >
-                <SelectTrigger id="rating-period" data-testid="select-rating-period">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rating-value">Rating</Label>
-              <Select 
-                value={ratingForm.rating} 
-                onValueChange={(value) => setRatingForm({ ...ratingForm, rating: value })}
-              >
-                <SelectTrigger id="rating-value" data-testid="select-rating-value">
-                  <SelectValue placeholder="Select rating" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Excellent">⭐⭐⭐⭐⭐ Excellent</SelectItem>
-                  <SelectItem value="Very Good">⭐⭐⭐⭐ Very Good</SelectItem>
-                  <SelectItem value="Good">⭐⭐⭐ Good</SelectItem>
-                  <SelectItem value="Average">⭐⭐ Average</SelectItem>
-                  <SelectItem value="Needs Improvement">⭐ Needs Improvement</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rating-feedback">Feedback (Optional)</Label>
-              <Textarea
-                id="rating-feedback"
-                placeholder="Provide additional feedback..."
-                value={ratingForm.feedback}
-                onChange={(e) => setRatingForm({ ...ratingForm, feedback: e.target.value })}
-                data-testid="textarea-rating-feedback"
-                rows={4}
-              />
-            </div>
-            <Button 
-              onClick={() => createRatingMutation.mutate(ratingForm)}
-              disabled={!ratingForm.userId || !ratingForm.rating || createRatingMutation.isPending}
-              data-testid="button-submit-rating"
-              className="w-full"
-            >
-              {createRatingMutation.isPending ? "Submitting..." : "Submit Rating"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
         <DialogContent>
@@ -805,7 +674,7 @@ export default function Users() {
             {/* Currently Assigned Members */}
             {teamAssignments.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm font-semibold">Currently Assigned Members ({teamAssignments.length})</Label>
+                <Label className="text-sm font-semibold">Currently Assigned Members</Label>
                 <div className="space-y-2">
                   {teamAssignments.map((member) => (
                     <div 
@@ -1059,17 +928,6 @@ export default function Users() {
                     </Button>
                   </div>
                 </div>
-
-                {selectedUserForDetails.role === 'team_leader' && (
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Team Members</Label>
-                    <div className="p-2 bg-muted rounded-md">
-                      <p className="text-sm font-medium" data-testid="text-detail-team-count">
-                        {teamMemberCounts.get(selectedUserForDetails.id) || 0} members assigned
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
                   <AlertDescription className="text-xs text-amber-800 dark:text-amber-200">

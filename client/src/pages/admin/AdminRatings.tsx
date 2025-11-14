@@ -19,7 +19,7 @@ export default function AdminRatings() {
     queryKey: ['/api/ratings'],
   });
 
-  const teamLeaders = users.filter(u => u.role === 'team_leader');
+  const employees = users.filter(u => u.role === 'team_leader' || u.role === 'company_member');
 
   const getUserNameById = (userId: number) => {
     const user = users.find(u => u.id === userId);
@@ -79,40 +79,45 @@ export default function AdminRatings() {
           Performance Ratings
         </h2>
         <p className="text-muted-foreground mt-1">
-          Rate team leaders and view all ratings
+          Rate employees and view all ratings
         </p>
       </div>
 
-      <Tabs defaultValue="team-leaders" className="space-y-4">
+      <Tabs defaultValue="all-employees" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="team-leaders" data-testid="tab-team-leaders">
+          <TabsTrigger value="all-employees" data-testid="tab-all-employees">
             <UsersIcon className="h-4 w-4 mr-2" />
-            Team Leaders ({teamLeaders.length})
+            All Employees ({employees.length})
           </TabsTrigger>
           <TabsTrigger value="all-ratings" data-testid="tab-all-ratings">
             All Ratings ({allRatings.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="team-leaders" className="space-y-4">
-          {teamLeaders.length > 0 ? (
+        <TabsContent value="all-employees" className="space-y-4">
+          {employees.length > 0 ? (
             <div className="grid gap-4">
-              {teamLeaders.map(leader => {
-                const latestRating = getLeaderLatestRating(leader.id);
+              {employees.map(employee => {
+                const latestRating = getLeaderLatestRating(employee.id);
                 return (
-                  <Card key={leader.id} data-testid={`card-leader-${leader.id}`}>
+                  <Card key={employee.id} data-testid={`card-employee-${employee.id}`}>
                     <CardHeader>
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-12 w-12">
-                            <AvatarImage src={leader.photoURL || undefined} />
+                            <AvatarImage src={employee.photoURL || undefined} />
                             <AvatarFallback className="bg-primary text-primary-foreground">
-                              {getInitials(leader.displayName)}
+                              {getInitials(employee.displayName)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <CardTitle className="text-lg">{leader.displayName}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{leader.email}</p>
+                            <div className="flex items-center gap-2">
+                              <CardTitle className="text-lg">{employee.displayName}</CardTitle>
+                              <Badge variant="secondary" className="text-xs">
+                                {employee.role === 'team_leader' ? 'Team Leader' : 'Member'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{employee.email}</p>
                             {latestRating ? (
                               <div className="flex items-center gap-2 mt-1">
                                 {renderStars(getRatingStars(latestRating.rating))}
@@ -128,12 +133,12 @@ export default function AdminRatings() {
                           </div>
                         </div>
                         <RatingDialog
-                          userId={leader.id}
-                          userName={leader.displayName}
+                          userId={employee.id}
+                          userName={employee.displayName}
                           trigger={
-                            <Button variant="outline" size="sm" data-testid={`button-rate-${leader.id}`}>
+                            <Button variant="outline" size="sm" data-testid={`button-rate-${employee.id}`}>
                               <Star className="h-4 w-4 mr-2" />
-                              Rate Leader
+                              Rate Employee
                             </Button>
                           }
                         />
@@ -171,7 +176,7 @@ export default function AdminRatings() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <UsersIcon className="h-12 w-12 text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">No team leaders found</p>
+                <p className="text-sm text-muted-foreground">No employees found</p>
               </CardContent>
             </Card>
           )}
