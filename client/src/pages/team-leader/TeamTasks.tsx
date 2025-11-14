@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, Edit, Trash2 } from "lucide-react";
+import { Plus, Calendar, User, Edit, Trash2, ClipboardList, Users } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Task {
   id: number;
@@ -57,7 +58,8 @@ export default function TeamTasks() {
   });
 
   const teamMemberIds = teamMembers.map(m => m.id);
-  const teamTasks = allTasks.filter(task => teamMemberIds.includes(task.assignedTo));
+  const leaderTasks = allTasks.filter(task => task.assignedTo === dbUserId);
+  const teamMemberTasks = allTasks.filter(task => teamMemberIds.includes(task.assignedTo));
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -185,14 +187,14 @@ export default function TeamTasks() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Team Tasks</h1>
-          <p className="text-muted-foreground">Manage and assign tasks to your team</p>
+          <h1 className="text-3xl font-bold">Tasks</h1>
+          <p className="text-muted-foreground">View your assigned tasks and manage team tasks</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-task" onClick={resetForm}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Task
+              Create Task for Team
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -269,67 +271,124 @@ export default function TeamTasks() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4">
-        {teamTasks.map((task) => {
-          const assignedMember = teamMembers.find(m => m.id === task.assignedTo);
-          return (
-            <Card key={task.id} data-testid={`card-task-${task.id}`}>
-              <CardHeader>
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg">{task.title}</CardTitle>
-                    {task.description && (
-                      <p className="text-sm text-muted-foreground mt-2">{task.description}</p>
-                    )}
-                    <CardDescription className="flex flex-wrap items-center gap-2 mt-2">
-                      <User className="h-4 w-4" />
-                      <span>{assignedMember?.displayName || 'Unknown'}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <Calendar className="h-4 w-4" />
-                      <span>{new Date(task.dueDate).toLocaleDateString()}</span>
-                    </CardDescription>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant={getPriorityColor(task.priority)}>
-                      {task.priority}
-                    </Badge>
-                    <Badge variant={getStatusColor(task.status)}>
-                      {task.status.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(task)} data-testid={`button-edit-task-${task.id}`}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => deleteTaskMutation.mutate(task.id)}
-                    disabled={deleteTaskMutation.isPending}
-                    data-testid={`button-delete-task-${task.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
+      <Tabs defaultValue="my-tasks" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="my-tasks" className="flex items-center gap-2" data-testid="tab-my-tasks">
+            <ClipboardList className="h-4 w-4" />
+            My Assigned Tasks ({leaderTasks.length})
+          </TabsTrigger>
+          <TabsTrigger value="team-tasks" className="flex items-center gap-2" data-testid="tab-team-tasks">
+            <Users className="h-4 w-4" />
+            Team Member Tasks ({teamMemberTasks.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="my-tasks">
+          <div className="grid gap-4">
+            {leaderTasks.map((task) => {
+              return (
+                <Card key={task.id} data-testid={`card-leader-task-${task.id}`}>
+                  <CardHeader>
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg">{task.title}</CardTitle>
+                        {task.description && (
+                          <p className="text-sm text-muted-foreground mt-2">{task.description}</p>
+                        )}
+                        <CardDescription className="flex flex-wrap items-center gap-2 mt-2">
+                          <Calendar className="h-4 w-4" />
+                          <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No deadline'}</span>
+                        </CardDescription>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant={getPriorityColor(task.priority)}>
+                          {task.priority}
+                        </Badge>
+                        <Badge variant={getStatusColor(task.status)}>
+                          {task.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </div>
+
+          {leaderTasks.length === 0 && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <p className="text-muted-foreground">No tasks assigned to you yet</p>
+                <p className="text-sm text-muted-foreground mt-2">Tasks assigned by admin will appear here</p>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          )}
+        </TabsContent>
 
-      {teamTasks.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">No tasks assigned yet</p>
-            <p className="text-sm text-muted-foreground mt-2">Create a task to get started</p>
-          </CardContent>
-        </Card>
-      )}
+        <TabsContent value="team-tasks">
+          <div className="grid gap-4">
+            {teamMemberTasks.map((task) => {
+              const assignedMember = teamMembers.find(m => m.id === task.assignedTo);
+              return (
+                <Card key={task.id} data-testid={`card-team-task-${task.id}`}>
+                  <CardHeader>
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg">{task.title}</CardTitle>
+                        {task.description && (
+                          <p className="text-sm text-muted-foreground mt-2">{task.description}</p>
+                        )}
+                        <CardDescription className="flex flex-wrap items-center gap-2 mt-2">
+                          <User className="h-4 w-4" />
+                          <span>{assignedMember?.displayName || 'Unknown'}</span>
+                          <span className="text-muted-foreground">•</span>
+                          <Calendar className="h-4 w-4" />
+                          <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No deadline'}</span>
+                        </CardDescription>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant={getPriorityColor(task.priority)}>
+                          {task.priority}
+                        </Badge>
+                        <Badge variant={getStatusColor(task.status)}>
+                          {task.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(task)} data-testid={`button-edit-task-${task.id}`}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => deleteTaskMutation.mutate(task.id)}
+                        disabled={deleteTaskMutation.isPending}
+                        data-testid={`button-delete-task-${task.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {teamMemberTasks.length === 0 && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <p className="text-muted-foreground">No team member tasks yet</p>
+                <p className="text-sm text-muted-foreground mt-2">Create a task to assign to your team members</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
