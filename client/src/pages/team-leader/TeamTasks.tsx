@@ -21,7 +21,7 @@ interface Task {
   description?: string;
   assignedTo: number;
   assignedBy: number;
-  dueDate: string;
+  deadline: string | null;
   priority: string;
   status: string;
   companyId: number;
@@ -43,7 +43,7 @@ export default function TeamTasks() {
     title: "",
     description: "",
     assignedTo: "",
-    dueDate: "",
+    deadline: "",
     priority: "medium",
     status: "pending",
   });
@@ -109,20 +109,21 @@ export default function TeamTasks() {
       title: "",
       description: "",
       assignedTo: "",
-      dueDate: "",
+      deadline: "",
       priority: "medium",
       status: "pending",
     });
   };
 
   const handleCreate = () => {
-    if (!taskForm.title || !taskForm.assignedTo || !taskForm.dueDate) {
+    if (!taskForm.title || !taskForm.assignedTo || !taskForm.deadline) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
     createTaskMutation.mutate({
       ...taskForm,
       assignedTo: parseInt(taskForm.assignedTo),
+      deadline: taskForm.deadline ? new Date(taskForm.deadline).toISOString() : null,
     });
   };
 
@@ -132,7 +133,7 @@ export default function TeamTasks() {
       title: task.title,
       description: task.description || "",
       assignedTo: task.assignedTo.toString(),
-      dueDate: task.dueDate.split('T')[0],
+      deadline: task.deadline ? task.deadline.split('T')[0] : "",
       priority: task.priority,
       status: task.status,
     });
@@ -145,6 +146,7 @@ export default function TeamTasks() {
       id: selectedTask.id,
       ...taskForm,
       assignedTo: parseInt(taskForm.assignedTo),
+      deadline: taskForm.deadline ? new Date(taskForm.deadline).toISOString() : null,
     });
   };
 
@@ -238,12 +240,12 @@ export default function TeamTasks() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="dueDate">Due Date *</Label>
+                  <Label htmlFor="deadline">Deadline *</Label>
                   <Input
-                    id="dueDate"
+                    id="deadline"
                     type="date"
-                    value={taskForm.dueDate}
-                    onChange={(e) => setTaskForm({...taskForm, dueDate: e.target.value})}
+                    value={taskForm.deadline}
+                    onChange={(e) => setTaskForm({...taskForm, deadline: e.target.value})}
                   />
                 </div>
                 <div>
@@ -297,7 +299,7 @@ export default function TeamTasks() {
                         )}
                         <CardDescription className="flex flex-wrap items-center gap-2 mt-2">
                           <Calendar className="h-4 w-4" />
-                          <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No deadline'}</span>
+                          <span>{task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}</span>
                         </CardDescription>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -343,7 +345,7 @@ export default function TeamTasks() {
                           <span>{assignedMember?.displayName || 'Unknown'}</span>
                           <span className="text-muted-foreground">•</span>
                           <Calendar className="h-4 w-4" />
-                          <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No deadline'}</span>
+                          <span>{task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}</span>
                         </CardDescription>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -428,12 +430,12 @@ export default function TeamTasks() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-dueDate">Due Date</Label>
+                <Label htmlFor="edit-deadline">Deadline</Label>
                 <Input
-                  id="edit-dueDate"
+                  id="edit-deadline"
                   type="date"
-                  value={taskForm.dueDate}
-                  onChange={(e) => setTaskForm({...taskForm, dueDate: e.target.value})}
+                  value={taskForm.deadline}
+                  onChange={(e) => setTaskForm({...taskForm, deadline: e.target.value})}
                 />
               </div>
               <div>
