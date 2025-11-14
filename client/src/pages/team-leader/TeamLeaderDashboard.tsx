@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, CheckSquare, Calendar, Clock, Circle, UserCheck, UserX } from "lucide-react";
+import { Users, CheckSquare, Calendar, Clock, Circle, UserCheck, UserX, MessageSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
 
 interface TeamMember {
   id: number;
@@ -39,6 +40,24 @@ interface AttendanceRecord {
   status: string;
 }
 
+interface GroupMessage {
+  id: number;
+  companyId: number;
+  senderId: number;
+  title: string | null;
+  message: string;
+  createdAt: string;
+}
+
+interface Message {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  message: string;
+  readStatus: boolean;
+  createdAt: string;
+}
+
 export default function TeamLeaderDashboard() {
   const { user, dbUserId, companyId } = useAuth();
 
@@ -59,6 +78,16 @@ export default function TeamLeaderDashboard() {
 
   const { data: todayAttendance = [] } = useQuery<AttendanceRecord[]>({
     queryKey: [`/api/team-assignments/${dbUserId}/attendance/today`],
+    enabled: !!dbUserId,
+  });
+
+  const { data: groupMessages = [] } = useQuery<GroupMessage[]>({
+    queryKey: ['/api/group-messages'],
+    enabled: !!companyId,
+  });
+
+  const { data: privateMessages = [] } = useQuery<Message[]>({
+    queryKey: ['/api/messages'],
     enabled: !!dbUserId,
   });
 
@@ -357,6 +386,88 @@ export default function TeamLeaderDashboard() {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card data-testid="card-announcements">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Recent Announcements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {groupMessages.length > 0 ? (
+              <div className="space-y-3">
+                {groupMessages.slice(0, 5).map((msg) => (
+                  <div 
+                    key={msg.id} 
+                    className="p-3 rounded-md bg-muted/50 space-y-1"
+                    data-testid={`announcement-${msg.id}`}
+                  >
+                    {msg.title && (
+                      <h4 className="font-semibold text-sm">{msg.title}</h4>
+                    )}
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {msg.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(msg.createdAt), "MMM dd, yyyy 'at' h:mm a")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  No announcements yet
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-private-messages">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Recent Messages
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {privateMessages.length > 0 ? (
+              <div className="space-y-3">
+                {privateMessages.slice(0, 5).map((msg) => (
+                  <div 
+                    key={msg.id} 
+                    className="p-3 rounded-md bg-muted/50 space-y-1"
+                    data-testid={`message-${msg.id}`}
+                  >
+                    <p className="text-sm line-clamp-2">
+                      {msg.message}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(msg.createdAt), "MMM dd, yyyy 'at' h:mm a")}
+                      </p>
+                      {!msg.readStatus && msg.receiverId === dbUserId && (
+                        <Badge variant="default" className="text-xs">New</Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  No messages yet
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

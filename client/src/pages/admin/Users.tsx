@@ -218,10 +218,17 @@ export default function Users() {
   const canAddAdmin = !adminSlots || adminSlots.available > 0;
   const canAddMember = !memberSlots || memberSlots.available > 0;
 
-  // Memoized list of assignable company members (excludes admins and team leaders)
+  // Get all allocated member IDs across all team leaders
+  const allAllocatedMemberIds = useMemo(() => {
+    return new Set(allTeamAssignments.map(ta => ta.memberId));
+  }, [allTeamAssignments]);
+
+  // Memoized list of assignable company members (excludes admins, team leaders, and already allocated members)
   const assignableMembers = useMemo(() => {
-    return activeUsers.filter(u => u.role === 'company_member');
-  }, [activeUsers]);
+    return activeUsers.filter(u => 
+      u.role === 'company_member' && !allAllocatedMemberIds.has(u.id)
+    );
+  }, [activeUsers, allAllocatedMemberIds]);
 
   // Memoized filtered list based on search query
   const filteredAssignableMembers = useMemo(() => {
@@ -316,44 +323,61 @@ export default function Users() {
                           </Badge>
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            data-testid={`button-user-menu-${user.id}`}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {(user.role === 'company_member' || user.role === 'team_leader') && (
-                            <>
-                              <DropdownMenuItem 
-                                onClick={() => {
-                                  setSelectedUserForDetails(user);
-                                  setUserDetailsDialogOpen(true);
-                                }}
-                                data-testid={`menu-view-details-${user.id}`}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="text-destructive"
-                                onClick={() => deleteUserMutation.mutate(user.id)}
-                                disabled={deleteUserMutation.isPending}
-                                data-testid={`menu-remove-user-${user.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Remove
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {user.role !== 'company_admin' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              data-testid={`button-user-menu-${user.id}`}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {user.role === 'team_leader' && (
+                              <>
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setSelectedTeamLeader(user);
+                                    setUserDetailsDialogOpen(true);
+                                  }}
+                                  data-testid={`menu-view-team-members-${user.id}`}
+                                >
+                                  <Users2 className="h-4 w-4 mr-2" />
+                                  View Team Members
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            {user.role === 'company_member' && (
+                              <>
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setSelectedUserForDetails(user);
+                                    setUserDetailsDialogOpen(true);
+                                  }}
+                                  data-testid={`menu-view-details-${user.id}`}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => deleteUserMutation.mutate(user.id)}
+                              disabled={deleteUserMutation.isPending}
+                              data-testid={`menu-remove-user-${user.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                     {user.role === 'team_leader' && (
                       <div className="flex gap-2 mt-4 pt-3 border-t">

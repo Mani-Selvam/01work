@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ListTodo, UserCheck } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Plus, ListTodo, UserCheck, MoreVertical, Edit, Trash2, Undo2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -20,6 +21,7 @@ export default function AdminTasks() {
   const { toast } = useToast();
   const { dbUserId } = useAuth();
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskForm, setTaskForm] = useState({
     title: "",
     description: "",
@@ -74,6 +76,76 @@ export default function AdminTasks() {
     },
   });
 
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, taskData }: { taskId: number; taskData: typeof taskForm }) => {
+      const payload = {
+        assignedTo: parseInt(taskData.assignedTo),
+        title: taskData.title,
+        description: taskData.description || null,
+        priority: taskData.priority,
+        deadline: taskData.deadline ? new Date(taskData.deadline).toISOString() : null,
+      };
+      return await apiRequest(`/api/tasks/${taskId}`, 'PATCH', payload);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Task updated successfully",
+      });
+      setTaskDialogOpen(false);
+      setEditingTask(null);
+      setTaskForm({ title: "", description: "", assignedTo: "", priority: "medium", deadline: "" });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks?assignedBy=${dbUserId}`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update task",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      return await apiRequest(`/api/tasks/${taskId}`, 'DELETE');
+    },
+    onSuccess: () => {
+      toast({
+        title: "Task deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks?assignedBy=${dbUserId}`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to delete task",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const returnTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      return await apiRequest(`/api/tasks/${taskId}`, 'PATCH', { status: 'pending' });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Task returned to pending",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks?assignedBy=${dbUserId}`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to return task",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const getUserNameById = (userId: number) => {
     const user = users.find(u => u.id === userId);
     return user?.displayName || "Unknown User";
@@ -88,7 +160,29 @@ export default function AdminTasks() {
       });
       return;
     }
-    createTaskMutation.mutate(taskForm);
+    if (editingTask) {
+      updateTaskMutation.mutate({ taskId: editingTask.id, taskData: taskForm });
+    } else {
+      createTaskMutation.mutate(taskForm);
+    }
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setTaskForm({
+      title: task.title,
+      description: task.description || "",
+      assignedTo: task.assignedTo.toString(),
+      priority: task.priority,
+      deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : "",
+    });
+    setTaskDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setTaskDialogOpen(false);
+    setEditingTask(null);
+    setTaskForm({ title: "", description: "", assignedTo: "", priority: "medium", deadline: "" });
   };
 
   return (
@@ -100,18 +194,30 @@ export default function AdminTasks() {
             Assign and track tasks
           </p>
         </div>
-        <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Create Task</span>
-            </Button>
-          </DialogTrigger>
+        <Button 
+          className="gap-2"
+          onClick={() => {
+            setEditingTask(null);
+            setTaskForm({ title: "", description: "", assignedTo: "", priority: "medium", deadline: "" });
+            setTaskDialogOpen(true);
+          }}
+          data-testid="button-open-task-dialog"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Create Task</span>
+        </Button>
+      </div>
+
+      <Dialog open={taskDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          handleCloseDialog();
+        }
+      }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Task</DialogTitle>
+              <DialogTitle>{editingTask ? 'Edit Task' : 'Create New Task'}</DialogTitle>
               <DialogDescription>
-                Assign a new task to one or more users
+                {editingTask ? 'Update task details' : 'Assign a new task to one or more users'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -179,14 +285,15 @@ export default function AdminTasks() {
                 onClick={handleCreateTask} 
                 className="w-full" 
                 data-testid="button-create-task"
-                disabled={createTaskMutation.isPending}
+                disabled={createTaskMutation.isPending || updateTaskMutation.isPending}
               >
-                {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                {createTaskMutation.isPending || updateTaskMutation.isPending 
+                  ? (editingTask ? "Updating..." : "Creating...") 
+                  : (editingTask ? "Update Task" : "Create Task")}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -221,6 +328,7 @@ export default function AdminTasks() {
                           <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold">Priority</th>
                           <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold">Status</th>
                           <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold">Deadline</th>
+                          <th className="text-right py-3 px-4 text-xs sm:text-sm font-semibold">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -247,6 +355,40 @@ export default function AdminTasks() {
                             </td>
                             <td className="py-3 px-4 text-xs font-mono">
                               {task.deadline ? format(new Date(task.deadline), "MMM dd, yyyy") : '—'}
+                            </td>
+                            <td className="py-3 px-4">
+                              {task.assignedBy === dbUserId && (
+                                <div className="flex justify-end">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`button-task-actions-${task.id}`}>
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleEditTask(task)} data-testid={`menu-edit-task-${task.id}`}>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      {(task.status === 'completed' || task.status === 'in_progress') && (
+                                        <DropdownMenuItem onClick={() => returnTaskMutation.mutate(task.id)} data-testid={`menu-return-task-${task.id}`}>
+                                          <Undo2 className="h-4 w-4 mr-2" />
+                                          Return to Pending
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        className="text-destructive" 
+                                        onClick={() => deleteTaskMutation.mutate(task.id)}
+                                        data-testid={`menu-delete-task-${task.id}`}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -284,6 +426,7 @@ export default function AdminTasks() {
                           <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold">Priority</th>
                           <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold">Status</th>
                           <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold">Deadline</th>
+                          <th className="text-right py-3 px-4 text-xs sm:text-sm font-semibold">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -310,6 +453,38 @@ export default function AdminTasks() {
                             </td>
                             <td className="py-3 px-4 text-xs font-mono">
                               {task.deadline ? format(new Date(task.deadline), "MMM dd, yyyy") : '—'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex justify-end">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`button-my-task-actions-${task.id}`}>
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEditTask(task)} data-testid={`menu-edit-my-task-${task.id}`}>
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    {(task.status === 'completed' || task.status === 'in_progress') && (
+                                      <DropdownMenuItem onClick={() => returnTaskMutation.mutate(task.id)} data-testid={`menu-return-my-task-${task.id}`}>
+                                        <Undo2 className="h-4 w-4 mr-2" />
+                                        Return to Pending
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="text-destructive" 
+                                      onClick={() => deleteTaskMutation.mutate(task.id)}
+                                      data-testid={`menu-delete-my-task-${task.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                             </td>
                           </tr>
                         ))}
