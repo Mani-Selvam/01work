@@ -2164,18 +2164,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "You can only rate team members" });
         }
       } else if (requestingUser.role === 'company_admin') {
-        // Admin can only rate team leaders in their company
+        // Admin can rate both team leaders and employees in their company
         if (targetUser.companyId !== requestingUser.companyId) {
           return res.status(403).json({ message: "You can only rate users in your company" });
         }
-        if (targetUser.role !== 'team_leader') {
-          return res.status(403).json({ message: "You can only rate team leaders" });
+        if (targetUser.role !== 'team_leader' && targetUser.role !== 'company_member') {
+          return res.status(403).json({ message: "You can only rate team leaders and employees" });
         }
       } else {
-        // Super admins are restricted to the same rules as company admins
-        // for least-privilege security. They can only rate team leaders.
-        if (targetUser.role !== 'team_leader') {
-          return res.status(403).json({ message: "You can only rate team leaders" });
+        // Super admins can also rate both team leaders and employees
+        if (targetUser.role !== 'team_leader' && targetUser.role !== 'company_member') {
+          return res.status(403).json({ message: "You can only rate team leaders and employees" });
         }
       }
       

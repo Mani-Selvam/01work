@@ -129,9 +129,9 @@ export default function AdminMessages() {
                     <SelectValue placeholder="Choose a user" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.filter(u => u.role === 'company_member').map(user => (
+                    {users.filter(u => u.role === 'company_member' || u.role === 'team_leader').map(user => (
                       <SelectItem key={user.id} value={user.id.toString()}>
-                        {user.displayName}
+                        {user.displayName} {user.role === 'team_leader' ? '(Team Leader)' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -1,0 +1,152 @@
+1) Ratings Section – Requirement Breakdown
+	A) Admin Section: 
+		1. Admin Can Give Ratings
+			Admin must be able to give ratings to:
+				✔️ All Employees
+				✔️ All Team Leaders
+				Current issue:
+					"Admin can give ratings only to team leaders"
+					Fix: Allow admin to rate everyone (team leaders + employees).
+		2. Rating Details
+			When admin submits a rating:
+			Store rating stars (1–5)
+			Store remarks ("Good", "Excellent", etc.)
+			Store who rated: Admin
+
+	B) Team Leader Section
+		1. Separate Ratings Section Needed
+			Currently admin ratings appear in recent messages for team leaders.
+		Requirement:
+			❌ Remove admin rating updates from “Recent Messages”.
+			✔️ Show admin ratings inside the existing Ratings Section.
+		2. Keep Existing Functionality
+			Do NOT change the existing feature where:
+			Team leaders can give ratings to their team members.
+			Keep current team leader → employee rating working as it is.
+	
+	C) Employee (User) Section
+		1. Display Admin Ratings
+			Employees should be able to see:
+					"Admin" + Rating + Stars + Message (Good/Excellent)
+			This should appear in:
+					✔️ Ratings Section (not messages)
+		2. Display Team Leader Ratings
+			Employees see:
+					"Team Leader" + Rating + Stars + Message (Good/Excellent)
+			Also in:
+					✔️ Ratings Section only
+					(not in normal message sections)
+
+2) Feedback Section – Requirement Breakdown
+    A) Users (Employees)
+        1. Feedback Submit Options
+            Employees should have a feedback form with two choices:
+            Send to Admin
+            Send to Team Leader
+        2. Behaviour
+            If user selects Admin:
+                Feedback goes to Admin → Feedback Section
+                Include:
+                    User Name
+                    Feedback Message
+            If user selects Team Leader:
+                Feedback also goes to Admin → Feedback Section
+            Include:
+                User Name
+                Feedback Message
+ ⚠️ Note: Feedback to team leader also goes to admin (as per requirement).
+
+    B) Team Leader Section
+        1. Feedback Form (Fix Required)
+            Current TL feedback form is not working.
+                Need to make it work with:
+                    Feedback form opens properly.
+                    Team leader can choose:
+                    Admin
+                    Employees
+        2. Team Leader Sending Feedback
+            If TL selects Admin:
+                Feedback appears in Admin → Feedback Section
+                Show:
+                    Team Leader Name
+                    Feedback Message
+            If TL selects Employees:
+                Feedback also appears in Admin → Feedback Section
+                Show:
+                    Team Leader Name
+                    Feedback Message
+⚠️ All TL feedback routes go to admin section.
+
+    C) Admin Section
+        1. Admin Feedback Panel
+        Admin sees all feedback submitted by:
+        Employees
+            Team Leaders
+                Display:
+                    Sender Name (User or TL)
+                    Feedback Message
+                    Recipient Type (Admin / TL / Employee)
+                    Time & date (if needed)
+        2. Admin Response Option
+            Admin should have a reply dropdown with predefined responses:
+                Good
+                Bad
+                Excellent
+                Satisfactory
+                Needs Improvement
+            Admin selects one and sends reply.
+        3. Reply Behaviour
+            Reply is visible to the person who submitted the feedback.
+
+
+3) Leave Section – Requirement Breakdown
+    A) Users (Employees)
+        ✔️ No Changes Required
+        Employee leave request flow is already working perfectly.
+        Keep existing features as they are:
+        Request leave
+        View status
+        Cancel (if you already created)
+        Do not change anything in user leave workflow.
+    B) Team Leader
+        1. Add Leave Request Section
+            Team Leader should have a new section:
+                Leave Requests (From Team Members)
+                Team Leader can:
+                    View employee leave requests under their team
+                    Approve or Reject BUT approval goes only to Admin for final confirmation.
+        2. Team Leader Action Rules
+            Team Leader can mark:
+                Approve (send to admin)
+                Reject (send to admin)
+                Team Leader cannot finalize the leave; only admin finalizes.
+                (Your current functionality stays the same; only this section needs to be added.)
+    C) Admin
+        1. Admin Controls Leave for Everyone
+            Admin can:
+                View leave requests from Employees
+                View leave requests from Team Leaders
+                Approve or Reject them
+                This is already working — keep as is.
+        2. NEW FEATURE – Edit After Approval/Reject
+            After admin performs an action (Approve or Reject), show an Edit Option:
+                Example:
+                    If Admin Approves a leave → show
+                    [ Edit Status ] button
+                    Admin can change to:
+                        Reject
+                        Pending
+                        Re-Approve
+                        If Admin Rejects a leave → show
+                        [ Edit Status ] button
+                Admin can change to:
+                        Approve
+                        Pending
+                        Reject again
+        3. Edit Option Requirements
+            Should only appear after admin has already taken action.
+            Should not show on Pending leaves.
+            Must update leave status everywhere:
+                Employee view
+                Team leader view
+                Admin panel

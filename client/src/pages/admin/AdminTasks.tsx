@@ -30,6 +30,17 @@ export default function AdminTasks() {
     deadline: "",
   });
 
+  const safeConvertToISO = (dateValue: string | null | undefined): string | null => {
+    if (!dateValue) return null;
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return null;
+      return date.toISOString();
+    } catch {
+      return null;
+    }
+  };
+
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ['/api/users'],
   });
@@ -51,7 +62,7 @@ export default function AdminTasks() {
         title: taskData.title,
         description: taskData.description || null,
         priority: taskData.priority,
-        deadline: taskData.deadline ? new Date(taskData.deadline).toISOString() : null,
+        deadline: safeConvertToISO(taskData.deadline),
         status: "pending",
       };
       return await apiRequest('/api/tasks', 'POST', payload);
@@ -83,7 +94,7 @@ export default function AdminTasks() {
         title: taskData.title,
         description: taskData.description || null,
         priority: taskData.priority,
-        deadline: taskData.deadline ? new Date(taskData.deadline).toISOString() : null,
+        deadline: safeConvertToISO(taskData.deadline),
       };
       return await apiRequest(`/api/tasks/${taskId}`, 'PATCH', payload);
     },
