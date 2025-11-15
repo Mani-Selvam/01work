@@ -52,6 +52,7 @@ import TeamLeaderDashboard from "@/pages/team-leader/TeamLeaderDashboard";
 import TeamMembers from "@/pages/team-leader/TeamMembers";
 import TeamTasks from "@/pages/team-leader/TeamTasks";
 import TeamLeaveApproval from "@/pages/team-leader/TeamLeaveApproval";
+import TeamLeaderLeaveRequests from "@/pages/team-leader/TeamLeaderLeaveRequests";
 import TeamCorrectionRequests from "@/pages/team-leader/TeamCorrectionRequests";
 import TeamLeaderAttendance from "@/pages/team-leader/TeamLeaderAttendance";
 import TeamAttendanceMonitor from "@/pages/team-leader/TeamAttendanceMonitor";
@@ -269,6 +270,9 @@ function Router() {
       </Route>
       <Route path="/team-leader/leaves">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaveApproval /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/leave-requests">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderLeaveRequests /></TeamLeaderLayout>} allowedRole="team_leader" />}
       </Route>
       <Route path="/team-leader/corrections">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamCorrectionRequests /></TeamLeaderLayout>} allowedRole="team_leader" />}

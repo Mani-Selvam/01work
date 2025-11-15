@@ -47,6 +47,7 @@ const teamLeaderNavItems: NavItem[] = [
   { path: "/team-leader/messages", label: "Team Messages", icon: MessageSquare },
   { path: "/team-leader/ratings", label: "Team Ratings", icon: Star },
   { path: "/team-leader/feedback", label: "Team Feedback", icon: MessageCircle },
+  { path: "/team-leader/leave-requests", label: "My Leave Requests", icon: Calendar },
   { path: "/team-leader/leaves", label: "Leave Approval", icon: Calendar },
   { path: "/team-leader/corrections", label: "Correction Requests", icon: FileEdit },
   { path: "/team-leader/attendance", label: "My Attendance", icon: UserCheck },
