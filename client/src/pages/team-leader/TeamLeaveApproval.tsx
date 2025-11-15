@@ -36,11 +36,10 @@ export default function TeamLeaveApproval() {
   const handleWebSocketMessage = useCallback((data: any) => {
     if (data.type === 'LEAVE_STATUS_UPDATE' && data.data.companyId === companyId) {
       queryClient.invalidateQueries({ queryKey: [`/api/leaves/company/${companyId}`] });
-      const action = data.data.status === 'approved' ? 'approved' : 'rejected';
-      const actionBy = data.data.approvedBy || data.data.rejectedBy;
+      const actionBy = data.data.changedBy || data.data.approvedBy || data.data.rejectedBy;
       toast({
         title: "Leave Status Updated",
-        description: `${data.data.userName}'s leave has been ${action} by ${actionBy}`,
+        description: `${data.data.userName}'s leave status changed to ${data.data.status} by ${actionBy}`,
       });
     }
   }, [toast, companyId]);

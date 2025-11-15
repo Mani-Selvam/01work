@@ -1615,7 +1615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assignedByUser = validatedTask.assignedBy ? await storage.getUserById(validatedTask.assignedBy) : null;
         const assignedToUser = await storage.getUserById(validatedTask.assignedTo);
         
-        let notificationMessageType = 'team_leader_to_employee';
+        let notificationMessageType: 'team_leader_to_employee' | 'admin_to_team_leader' | 'admin_to_employee' | 'employee_to_team_leader' = 'team_leader_to_employee';
         if (assignedByUser && assignedToUser) {
           if (assignedByUser.role === 'company_admin' && assignedToUser.role === 'team_leader') {
             notificationMessageType = 'admin_to_team_leader';
@@ -2650,7 +2650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get all users in the company
             const companyUsers = await storage.getUsersByCompanyId(requestingUser.companyId!);
             const companyUserIds = companyUsers.map(u => u.id);
-            const companyFeedbacks = allFeedbacks.filter(f => companyUserIds.includes(f.userId));
+            const companyFeedbacks = allFeedbacks.filter(f => companyUserIds.includes(f.submittedBy));
             res.json(companyFeedbacks);
           }
         } else if (requestingUser.role === 'team_leader') {
@@ -2658,7 +2658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamMembers = await storage.getTeamMembersByLeader(requestingUser.id);
           const teamMemberIds = teamMembers.map(m => m.id);
           const allFeedbacks = await storage.getAllFeedbacks();
-          const teamFeedbacks = allFeedbacks.filter(f => teamMemberIds.includes(f.userId));
+          const teamFeedbacks = allFeedbacks.filter(f => teamMemberIds.includes(f.submittedBy));
           res.json(teamFeedbacks);
         } else {
           // Regular users can only see their own feedbacks
@@ -3469,6 +3469,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({ message: "Leave rejected successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/leaves/:leaveId/status", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      const leaveId = parseInt(req.params.leaveId);
+      
+      if (!requestingUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      if (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin') {
+        return res.status(403).json({ message: "Only admins can directly change leave status" });
+      }
+      
+      const validatedInput = z.object({
+        status: z.enum(['pending', 'approved', 'rejected'], {
+          errorMap: () => ({ message: "Invalid status. Must be: pending, approved, or rejected" })
+        }),
+      }).parse(req.body);
+
+      const leave = await storage.getLeaveById(leaveId);
+      if (!leave) {
+        return res.status(404).json({ message: "Leave request not found" });
+      }
+      
+      if (requestingUser.companyId !== leave.companyId) {
+        return res.status(403).json({ message: "You can only modify leave requests for your own company" });
+      }
+
+      await storage.updateLeaveStatus(leaveId, validatedInput.status, requestingUserId);
+      
+      const { broadcast } = await import('./index.js');
+      const leaveUser = await storage.getUserById(leave.userId);
+      broadcast({
+        type: 'LEAVE_STATUS_UPDATE',
+        data: {
+          leaveId,
+          userId: leave.userId,
+          userName: leaveUser?.displayName,
+          status: validatedInput.status,
+          changedBy: requestingUser.displayName,
+          companyId: leave.companyId,
+        }
+      });
+      
+      res.json({ message: `Leave status changed to ${validatedInput.status} successfully` });
     } catch (error) {
       next(error);
     }

@@ -6,6 +6,7 @@ import { Calendar, Clock, Check, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { useCallback } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Leave } from "@shared/schema";
 
 type LeaveWithUser = Leave & { userName: string };
@@ -20,11 +21,10 @@ export default function LeaveApproval() {
   const handleWebSocketMessage = useCallback((data: any) => {
     if (data.type === 'LEAVE_STATUS_UPDATE' && data.data.companyId === user?.companyId) {
       queryClient.invalidateQueries({ queryKey: [`/api/leaves/company/${user?.companyId}`] });
-      const action = data.data.status === 'approved' ? 'approved' : 'rejected';
-      const actionBy = data.data.approvedBy || data.data.rejectedBy;
+      const actionBy = data.data.changedBy || data.data.approvedBy || data.data.rejectedBy;
       toast({
         title: "Leave Status Updated",
-        description: `${data.data.userName}'s leave has been ${action} by ${actionBy}`,
+        description: `${data.data.userName}'s leave status changed to ${data.data.status} by ${actionBy}`,
       });
     }
   }, [toast, user?.companyId]);
@@ -71,6 +71,26 @@ export default function LeaveApproval() {
       toast({
         title: "Error",
         description: "Failed to reject leave request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const changeStatusMutation = useMutation({
+    mutationFn: async ({ leaveId, status }: { leaveId: number; status: string }) => {
+      return await apiRequest(`/api/leaves/${leaveId}/status`, 'PATCH', { status });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/leaves/company/${user?.companyId}`] });
+      toast({
+        title: "Status updated",
+        description: `Leave status changed to ${variables.status}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update leave status. Please try again.",
         variant: "destructive",
       });
     },
@@ -221,6 +241,22 @@ export default function LeaveApproval() {
                     <p className="text-sm text-gray-700 dark:text-gray-300">
                       <span className="font-medium">Reason:</span> {leave.reason}
                     </p>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Select
+                      value={leave.status}
+                      onValueChange={(status) => changeStatusMutation.mutate({ leaveId: leave.id, status })}
+                      disabled={changeStatusMutation.isPending}
+                    >
+                      <SelectTrigger className="w-32" data-testid={`select-status-${leave.id}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </Card>

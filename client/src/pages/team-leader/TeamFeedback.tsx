@@ -3,10 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useMemo } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Feedback {
   id: number;
@@ -27,7 +40,11 @@ interface ExtendedFeedback extends Feedback {
 
 export default function TeamFeedback() {
   const { dbUserId, companyId } = useAuth();
+  const { toast } = useToast();
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [recipientType, setRecipientType] = useState<"Admin" | "TeamLeader">("Admin");
 
   const { data: teamMembers = [], isLoading: loadingMembers } = useQuery<TeamMember[]>({
     queryKey: [`/api/team-assignments/${dbUserId}/members`],
@@ -95,6 +112,43 @@ export default function TeamFeedback() {
     return <Badge variant="default">Suggestion</Badge>;
   };
 
+  const submitFeedbackMutation = useMutation({
+    mutationFn: async (data: { message: string; recipientType: string }) => {
+      return await apiRequest('/api/feedbacks', 'POST', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `Your feedback has been submitted to ${recipientType}`,
+      });
+      setFeedbackMessage("");
+      setIsSubmitDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/feedbacks'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit feedback",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmitFeedback = () => {
+    if (!feedbackMessage.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your feedback",
+        variant: "destructive",
+      });
+      return;
+    }
+    submitFeedbackMutation.mutate({
+      message: feedbackMessage,
+      recipientType,
+    });
+  };
+
   const filteredFeedbackList = selectedType 
     ? teamFeedbackList.filter(f => {
         const lowerMessage = f.message.toLowerCase();
@@ -139,7 +193,10 @@ export default function TeamFeedback() {
           <h1 className="text-3xl font-bold">Team Feedback</h1>
           <p className="text-muted-foreground">Review feedback from your team members</p>
         </div>
-        <Button data-testid="button-provide-feedback">
+        <Button 
+          onClick={() => setIsSubmitDialogOpen(true)}
+          data-testid="button-provide-feedback"
+        >
           <MessageSquare className="h-4 w-4 mr-2" />
           Provide Feedback
         </Button>
@@ -241,6 +298,58 @@ export default function TeamFeedback() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+        <DialogContent data-testid="dialog-submit-feedback">
+          <DialogHeader>
+            <DialogTitle>Submit Feedback</DialogTitle>
+            <DialogDescription>
+              Share your feedback with the admin or other team leaders
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipient">Send to</Label>
+              <Select value={recipientType} onValueChange={(value) => setRecipientType(value as "Admin" | "TeamLeader")}>
+                <SelectTrigger id="recipient" data-testid="select-recipient">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="TeamLeader">Team Leader</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="message">Message</Label>
+              <Textarea
+                id="message"
+                placeholder="Enter your feedback here..."
+                value={feedbackMessage}
+                onChange={(e) => setFeedbackMessage(e.target.value)}
+                rows={5}
+                data-testid="textarea-feedback-message"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsSubmitDialogOpen(false)}
+              data-testid="button-cancel-feedback"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitFeedback}
+              disabled={submitFeedbackMutation.isPending}
+              data-testid="button-submit-feedback"
+            >
+              {submitFeedbackMutation.isPending ? "Submitting..." : "Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
