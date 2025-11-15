@@ -2305,16 +2305,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      const { submittedBy } = req.query;
+      
       let feedbacks;
-      if (requestingUser.role === 'super_admin') {
+      if (submittedBy) {
+        // Only allow users to query their own feedback or admins to query anyone's
+        const targetUserId = parseInt(submittedBy as string);
+        if (targetUserId !== requestingUser.id && 
+            requestingUser.role !== 'super_admin' && 
+            requestingUser.role !== 'company_admin') {
+          return res.status(403).json({ message: "You can only view your own submitted feedback" });
+        }
+        
+        const targetUser = await storage.getUserById(targetUserId);
+        if (!targetUser || targetUser.companyId !== requestingUser.companyId) {
+          return res.json([]);
+        }
+        feedbacks = await storage.getFeedbacksByUserId(targetUserId);
+      } else if (requestingUser.role === 'super_admin') {
         feedbacks = await storage.getAllFeedbacks();
       } else if (requestingUser.role === 'company_admin' && requestingUser.companyId) {
+        // Admins see all feedbacks in their company
         feedbacks = await storage.getFeedbacksByCompanyId(requestingUser.companyId);
+      } else if (requestingUser.role === 'team_leader' && requestingUser.companyId) {
+        // Team leaders see feedbacks intended for them (recipientType = 'TeamLeader')
+        const allCompanyFeedbacks = await storage.getFeedbacksByCompanyId(requestingUser.companyId);
+        feedbacks = allCompanyFeedbacks.filter(f => f.recipientType === 'TeamLeader');
       } else {
+        // Regular users see their own submitted feedbacks
         feedbacks = await storage.getFeedbacksByUserId(requestingUser.id);
       }
 
-      res.json(feedbacks);
+      // Enrich feedbacks with submitter information
+      const enrichedFeedbacks = await Promise.all(
+        feedbacks.map(async (feedback) => {
+          const submitter = await storage.getUserById(feedback.submittedBy);
+          return {
+            ...feedback,
+            submitterName: submitter?.displayName || null,
+            submitterRole: submitter?.role || null,
+          };
+        })
+      );
+
+      res.json(enrichedFeedbacks);
     } catch (error) {
       next(error);
     }

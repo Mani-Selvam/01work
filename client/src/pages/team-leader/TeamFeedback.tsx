@@ -23,19 +23,12 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Feedback {
   id: number;
-  userId: number;
+  submittedBy: number;
+  recipientType: string;
   message: string;
   createdAt: string;
-}
-
-interface TeamMember {
-  id: number;
-  displayName: string;
-  email: string;
-}
-
-interface ExtendedFeedback extends Feedback {
-  displayName?: string;
+  submitterName?: string | null;
+  submitterRole?: string | null;
 }
 
 export default function TeamFeedback() {
@@ -46,26 +39,10 @@ export default function TeamFeedback() {
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [recipientType, setRecipientType] = useState<"Admin" | "TeamLeader">("Admin");
 
-  const { data: teamMembers = [], isLoading: loadingMembers } = useQuery<TeamMember[]>({
-    queryKey: [`/api/team-assignments/${dbUserId}/members`],
-    enabled: !!dbUserId,
-  });
-
-  const { data: allFeedbacks = [], isLoading: loadingFeedbacks } = useQuery<Feedback[]>({
+  const { data: teamFeedbackList = [], isLoading: loadingFeedbacks } = useQuery<Feedback[]>({
     queryKey: [`/api/feedbacks`],
     enabled: !!companyId,
   });
-
-  const teamMemberIds = teamMembers.map(m => m.id);
-  const teamFeedbackList: ExtendedFeedback[] = allFeedbacks
-    .filter(feedback => teamMemberIds.includes(feedback.userId))
-    .map(feedback => {
-      const member = teamMembers.find(m => m.id === feedback.userId);
-      return {
-        ...feedback,
-        displayName: member?.displayName,
-      };
-    });
 
   const feedbackStats = useMemo(() => {
     const positive = teamFeedbackList.filter(f => 
@@ -167,7 +144,7 @@ export default function TeamFeedback() {
       })
     : teamFeedbackList;
 
-  if (loadingMembers || loadingFeedbacks) {
+  if (loadingFeedbacks) {
     return (
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -256,13 +233,18 @@ export default function TeamFeedback() {
                   <Avatar>
                     <AvatarImage src="" />
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {feedback.displayName?.split(' ').map(n => n[0]).join('') || 'U'}
+                      {feedback.submitterName?.split(' ').map(n => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {getTypeIcon(feedback.message)}
-                      <CardTitle className="text-base">Feedback from {feedback.displayName || 'Team Member'}</CardTitle>
+                      <CardTitle className="text-base">
+                        Feedback from {feedback.submitterName || 'Unknown User'}
+                      </CardTitle>
+                      {feedback.submitterRole === 'company_admin' && (
+                        <Badge variant="secondary">Admin</Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {new Date(feedback.createdAt).toLocaleDateString()}
