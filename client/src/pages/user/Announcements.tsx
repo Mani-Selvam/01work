@@ -2,13 +2,70 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Megaphone, MessageCircle, Send } from "lucide-react";
+import { Megaphone, MessageCircle, Send, Mail } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/contexts/WebSocketContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { GroupMessage, GroupMessageReply } from "@shared/schema";
+
+interface Message {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  message: string;
+  messageType: string;
+  readStatus: boolean;
+  createdAt: string;
+}
+
+interface User {
+  id: number;
+  displayName: string;
+  email: string;
+  photoURL?: string;
+  role: string;
+}
+
+function AdminMessageCard({ message, sender }: { message: Message; sender?: User }) {
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  return (
+    <Card data-testid={`admin-message-${message.id}`}>
+      <CardHeader>
+        <div className="flex items-start gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={sender?.photoURL} alt={sender?.displayName} />
+            <AvatarFallback>{sender ? getInitials(sender.displayName) : 'AD'}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <CardTitle className="text-base">
+                {sender?.displayName || 'Administrator'}
+              </CardTitle>
+              {!message.readStatus && (
+                <Badge variant="secondary">New</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground font-mono">
+              {format(new Date(message.createdAt), "MMM dd, yyyy 'at' h:mm a")}
+            </p>
+          </div>
+          <Mail className="h-5 w-5 text-primary" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+      </CardContent>
+    </Card>
+  );
+}
 
 function AnnouncementCard({ announcement }: { announcement: GroupMessage }) {
   const [showReplies, setShowReplies] = useState(false);
@@ -151,7 +208,9 @@ function AnnouncementCard({ announcement }: { announcement: GroupMessage }) {
 }
 
 export default function Announcements() {
-  const { data: announcements = [], isLoading } = useQuery<GroupMessage[]>({
+  const { dbUserId } = useAuth();
+
+  const { data: announcements = [], isLoading: loadingAnnouncements } = useQuery<GroupMessage[]>({
     queryKey: ['/api/group-messages'],
     queryFn: async () => {
       const user = localStorage.getItem('user');
@@ -167,6 +226,27 @@ export default function Announcements() {
     },
   });
 
+  const { data: allMessages = [], isLoading: loadingMessages } = useQuery<Message[]>({
+    queryKey: ['/api/messages'],
+    enabled: !!dbUserId,
+  });
+
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ['/api/users'],
+  });
+
+  const adminMessages = allMessages.filter(
+    msg => msg.receiverId === dbUserId && msg.messageType === 'admin_to_employee'
+  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const sortedAnnouncements = [...announcements].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const getSenderInfo = (senderId: number) => {
+    return users.find(u => u.id === senderId);
+  };
+
   useWebSocket((data) => {
     if (data.type === 'GROUP_MESSAGE_REPLY') {
       queryClient.invalidateQueries({ 
@@ -175,7 +255,7 @@ export default function Announcements() {
     }
   });
 
-  if (isLoading) {
+  if (loadingAnnouncements || loadingMessages) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -184,23 +264,56 @@ export default function Announcements() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold">Announcements</h2>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">Group messages from admin</p>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
+          Messages from administration and company-wide updates
+        </p>
       </div>
 
-      {announcements.length > 0 ? (
+      {adminMessages.length > 0 && (
         <div className="space-y-4">
-          {announcements.map(announcement => (
-            <AnnouncementCard key={announcement.id} announcement={announcement} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          No announcements yet
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Admin Messages ({adminMessages.length})
+          </h3>
+          <div className="space-y-3">
+            {adminMessages.map((message) => (
+              <AdminMessageCard 
+                key={`admin-${message.id}`} 
+                message={message} 
+                sender={getSenderInfo(message.senderId)}
+              />
+            ))}
+          </div>
         </div>
       )}
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Megaphone className="h-5 w-5" />
+          Company Announcements ({sortedAnnouncements.length})
+        </h3>
+        {sortedAnnouncements.length > 0 ? (
+          <div className="space-y-4">
+            {sortedAnnouncements.map((announcement) => (
+              <AnnouncementCard key={`announcement-${announcement.id}`} announcement={announcement} />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-8">
+              <div className="text-center">
+                <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  No company announcements yet
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

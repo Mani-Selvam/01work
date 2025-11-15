@@ -90,6 +90,7 @@ export const messages = pgTable("messages", {
   senderId: integer("sender_id").references(() => users.id).notNull(),
   receiverId: integer("receiver_id").references(() => users.id).notNull(),
   message: text("message").notNull(),
+  messageType: varchar("message_type", { length: 30 }).notNull().default("team_leader_to_employee"),
   relatedTaskId: integer("related_task_id").references(() => tasks.id),
   readStatus: boolean("read_status").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -485,6 +486,8 @@ export const insertReportSchema = createInsertSchema(reports).omit({
 export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   createdAt: true,
+}).extend({
+  messageType: z.enum(['admin_to_employee', 'admin_to_team_leader', 'team_leader_to_employee', 'employee_to_team_leader']),
 });
 
 export const insertRatingSchema = createInsertSchema(ratings).omit({

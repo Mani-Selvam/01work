@@ -1612,10 +1612,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const task = await storage.createTask(validatedTask);
       
       if (validatedTask.assignedTo) {
+        const assignedByUser = validatedTask.assignedBy ? await storage.getUserById(validatedTask.assignedBy) : null;
+        const assignedToUser = await storage.getUserById(validatedTask.assignedTo);
+        
+        let notificationMessageType = 'team_leader_to_employee';
+        if (assignedByUser && assignedToUser) {
+          if (assignedByUser.role === 'company_admin' && assignedToUser.role === 'team_leader') {
+            notificationMessageType = 'admin_to_team_leader';
+          } else if (assignedByUser.role === 'company_admin' && assignedToUser.role === 'company_member') {
+            notificationMessageType = 'admin_to_employee';
+          } else if (assignedByUser.role === 'team_leader' && assignedToUser.role === 'company_member') {
+            notificationMessageType = 'team_leader_to_employee';
+          }
+        }
+        
         await storage.createMessage({
           senderId: validatedTask.assignedBy || 0,
           receiverId: validatedTask.assignedTo,
           message: `New task assigned: ${validatedTask.title}`,
+          messageType: notificationMessageType,
           relatedTaskId: task.id,
           readStatus: false,
         });
@@ -2002,6 +2017,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Cannot send messages across different companies" });
       }
 
+      // Determine message type based on sender and receiver roles
+      let messageType = 'team_leader_to_employee';
+      
+      if (requestingUser.role === 'company_admin' && receiverUser.role === 'team_leader') {
+        messageType = 'admin_to_team_leader';
+      } else if (requestingUser.role === 'company_admin' && receiverUser.role === 'company_member') {
+        messageType = 'admin_to_employee';
+      } else if (requestingUser.role === 'team_leader' && receiverUser.role === 'company_member') {
+        messageType = 'team_leader_to_employee';
+      } else if (requestingUser.role === 'company_member' && receiverUser.role === 'team_leader') {
+        messageType = 'employee_to_team_leader';
+      }
+
       // Authorization: Team leaders can message their team members, employees can reply to their team leader
       if (requestingUser.role === 'team_leader') {
         // Team leader sending to employee - check if receiver is in their team
@@ -2025,6 +2053,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         senderId: requestingUser.id,
         receiverId: req.body.receiverId,
         message: req.body.message,
+        messageType,
         relatedTaskId: req.body.relatedTaskId,
         readStatus: false,
       };
@@ -2163,10 +2192,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const rating = await storage.createRating(validatedRating);
         
+        const ratedUser = await storage.getUserById(validatedRating.userId);
+        
+        let ratingMessageType = 'team_leader_to_employee';
+        if (ratedUser) {
+          if (requestingUser.role === 'company_admin' && ratedUser.role === 'team_leader') {
+            ratingMessageType = 'admin_to_team_leader';
+          } else if (requestingUser.role === 'company_admin' && ratedUser.role === 'company_member') {
+            ratingMessageType = 'admin_to_employee';
+          } else if (requestingUser.role === 'team_leader' && ratedUser.role === 'company_member') {
+            ratingMessageType = 'team_leader_to_employee';
+          }
+        }
+        
         await storage.createMessage({
           senderId: requestingUser.id,
           receiverId: validatedRating.userId,
           message: `You received a new ${validatedRating.period} rating: ${validatedRating.rating}`,
+          messageType: ratingMessageType,
           readStatus: false,
         });
         

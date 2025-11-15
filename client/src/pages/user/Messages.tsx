@@ -15,6 +15,7 @@ interface Message {
   senderId: number;
   receiverId: number;
   message: string;
+  messageType: string;
   readStatus: boolean;
   createdAt: string;
 }
@@ -108,8 +109,9 @@ export default function Messages() {
   const conversationMessages = teamLeaderInfo
     ? allMessages
         .filter(
-          msg => (msg.senderId === teamLeaderInfo.id && msg.receiverId === dbUserId) ||
-                 (msg.senderId === dbUserId && msg.receiverId === teamLeaderInfo.id)
+          msg => ((msg.senderId === teamLeaderInfo.id && msg.receiverId === dbUserId) ||
+                 (msg.senderId === dbUserId && msg.receiverId === teamLeaderInfo.id)) &&
+                 (msg.messageType === 'team_leader_to_employee' || msg.messageType === 'employee_to_team_leader')
         )
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     : [];
@@ -142,7 +144,7 @@ export default function Messages() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold">Team Leader Messages</h2>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
           {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
         </p>

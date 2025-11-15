@@ -13,6 +13,8 @@ import {
   FileEdit,
   UserCheck,
   LogOut,
+  Mail,
+  Megaphone,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,7 +42,9 @@ const teamLeaderNavItems: NavItem[] = [
   { path: "/team-leader/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/team-leader/team", label: "My Team", icon: Users },
   { path: "/team-leader/tasks", label: "Team Tasks", icon: CheckSquare },
-  { path: "/team-leader/messages", label: "Messages", icon: MessageSquare },
+  { path: "/team-leader/private-messages", label: "Private Messages", icon: Mail },
+  { path: "/team-leader/announcements", label: "Announcements", icon: Megaphone },
+  { path: "/team-leader/messages", label: "Team Messages", icon: MessageSquare },
   { path: "/team-leader/ratings", label: "Team Ratings", icon: Star },
   { path: "/team-leader/feedback", label: "Team Feedback", icon: MessageCircle },
   { path: "/team-leader/leaves", label: "Leave Approval", icon: Calendar },
