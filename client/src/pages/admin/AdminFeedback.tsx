@@ -102,8 +102,7 @@ export default function AdminFeedback() {
               {pendingFeedbacks.map((feedback: Feedback) => {
                 const user = getUserById(feedback.submittedBy);
                 return (
-                  <Card key={feedback.id} data-testid={`feedback-${feedback.id}`}>
-                    <CardContent className="p-4 space-y-4">
+                  <div key={feedback.id} data-testid={`feedback-${feedback.id}`} className="p-4 space-y-4 border rounded-md">
                       <div className="flex items-start gap-3">
                         <Avatar className="h-10 w-10 mt-1">
                           <AvatarImage src={user?.photoURL || ''} />
@@ -171,8 +170,7 @@ export default function AdminFeedback() {
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                  </div>
                 );
               })}
             </div>
@@ -206,8 +204,7 @@ export default function AdminFeedback() {
               {respondedFeedbacks.map((feedback: Feedback) => {
                 const user = getUserById(feedback.submittedBy);
                 return (
-                  <Card key={feedback.id} className="border-green-200 dark:border-green-900" data-testid={`responded-feedback-${feedback.id}`}>
-                    <CardContent className="p-4 space-y-3">
+                  <div key={feedback.id} className="border-green-200 dark:border-green-900 p-4 space-y-3 border rounded-md" data-testid={`responded-feedback-${feedback.id}`}>
                       <div className="flex items-start gap-3">
                         <Avatar className="h-10 w-10 mt-1">
                           <AvatarImage src={user?.photoURL || ''} />
@@ -257,8 +254,7 @@ export default function AdminFeedback() {
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                  </div>
                 );
               })}
             </div>

@@ -160,27 +160,25 @@ export default function Feedback() {
           ) : submittedFeedbacks.length > 0 ? (
             <div className="space-y-4">
               {submittedFeedbacks.map((feedback) => (
-                <Card key={feedback.id} data-testid={`feedback-${feedback.id}`}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        {getRecipientIcon(feedback.recipientType)}
-                        <span className="text-sm font-medium">To: {feedback.recipientType === "TeamLeader" ? "Team Leader" : feedback.recipientType}</span>
-                      </div>
-                      {getStatusBadge(feedback)}
+                <div key={feedback.id} data-testid={`feedback-${feedback.id}`} className="p-4 space-y-3 border rounded-md">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {getRecipientIcon(feedback.recipientType)}
+                      <span className="text-sm font-medium">To: {feedback.recipientType === "TeamLeader" ? "Team Leader" : feedback.recipientType}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{feedback.message}</p>
-                    {feedback.adminResponse && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Admin Response:</p>
-                        <p className="text-sm font-semibold text-primary">{feedback.adminResponse}</p>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Submitted: {new Date(feedback.createdAt).toLocaleDateString()} at {new Date(feedback.createdAt).toLocaleTimeString()}
-                    </p>
-                  </CardContent>
-                </Card>
+                    {getStatusBadge(feedback)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{feedback.message}</p>
+                  {feedback.adminResponse && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Admin Response:</p>
+                      <p className="text-sm font-semibold text-primary">{feedback.adminResponse}</p>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Submitted: {new Date(feedback.createdAt).toLocaleDateString()} at {new Date(feedback.createdAt).toLocaleTimeString()}
+                  </p>
+                </div>
               ))}
             </div>
           ) : (
