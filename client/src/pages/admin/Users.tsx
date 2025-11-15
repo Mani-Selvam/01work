@@ -16,7 +16,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@shared/schema";
-import { Plus, Users as UsersIcon, Copy, CheckCircle, Users2, Search, MoreVertical, Eye, Trash2 } from "lucide-react";
+import { Plus, Users as UsersIcon, Copy, CheckCircle, Users2, Search, MoreVertical, Eye, Trash2, UserCircle } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface CompanyData {
   id: number;
@@ -31,6 +32,7 @@ interface CompanyData {
 export default function Users() {
   const { toast } = useToast();
   const { dbUserId, companyId, userRole } = useAuth();
+  const [, setLocation] = useLocation();
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [teamAssignmentDialogOpen, setTeamAssignmentDialogOpen] = useState(false);
@@ -340,13 +342,22 @@ export default function Users() {
                               <>
                                 <DropdownMenuItem 
                                   onClick={() => {
-                                    setSelectedTeamLeader(user);
-                                    setUserDetailsDialogOpen(true);
+                                    setLocation(`/admin/team-members/${user.id}`);
                                   }}
                                   data-testid={`menu-view-team-members-${user.id}`}
                                 >
                                   <Users2 className="h-4 w-4 mr-2" />
                                   View Team Members
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setSelectedUserForDetails(user);
+                                    setUserDetailsDialogOpen(true);
+                                  }}
+                                  data-testid={`menu-view-details-${user.id}`}
+                                >
+                                  <UserCircle className="h-4 w-4 mr-2" />
+                                  View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                               </>
@@ -380,11 +391,17 @@ export default function Users() {
                       )}
                     </div>
                     {user.role === 'team_leader' && (
-                      <div className="flex gap-2 mt-4 pt-3 border-t">
+                      <div className="space-y-2 mt-4 pt-3 border-t">
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">Team Members</p>
+                          <p className="text-lg font-bold" data-testid={`text-member-count-${user.id}`}>
+                            {allTeamAssignments.filter(ta => ta.teamLeaderId === user.id).length}
+                          </p>
+                        </div>
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="flex-1 text-xs h-8"
+                          className="w-full text-xs h-8"
                           data-testid={`button-manage-team-${user.id}`}
                           onClick={() => {
                             setSelectedTeamLeader(user);

@@ -36,6 +36,7 @@ import AttendanceReports from "@/pages/admin/AttendanceReports";
 import AttendancePolicy from "@/pages/admin/AttendancePolicy";
 import HolidayManagement from "@/pages/admin/HolidayManagement";
 import Users from "@/pages/admin/Users";
+import TeamMembersManagement from "@/pages/admin/TeamMembersManagement";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminTasks from "@/pages/admin/AdminTasks";
 import AdminMessages from "@/pages/admin/AdminMessages";
@@ -212,6 +213,9 @@ function Router() {
       </Route>
       <Route path="/admin/users">
         {() => <ProtectedRoute component={() => <AdminLayout><Users /></AdminLayout>} allowedRole="admin" />}
+      </Route>
+      <Route path="/admin/team-members/:teamLeaderId">
+        {(params) => <ProtectedRoute component={() => <AdminLayout><TeamMembersManagement params={params} /></AdminLayout>} allowedRole="admin" />}
       </Route>
       <Route path="/admin/reports">
         {() => <ProtectedRoute component={() => <AdminLayout><AdminReports /></AdminLayout>} allowedRole="admin" />}
