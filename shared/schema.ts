@@ -160,9 +160,13 @@ export const taskTimeLogs = pgTable("task_time_logs", {
 
 export const feedbacks = pgTable("feedbacks", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  submittedBy: integer("submitted_by").references(() => users.id).notNull(),
+  recipientType: varchar("recipient_type", { length: 20 }).notNull(),
   message: text("message").notNull(),
+  adminResponse: varchar("admin_response", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  respondedAt: timestamp("responded_at"),
 });
 
 export const slotPricing = pgTable("slot_pricing", {
@@ -518,6 +522,9 @@ export const insertTaskTimeLogSchema = createInsertSchema(taskTimeLogs).omit({
 export const insertFeedbackSchema = createInsertSchema(feedbacks).omit({
   id: true,
   createdAt: true,
+  respondedAt: true,
+}).extend({
+  recipientType: z.enum(['Admin', 'TeamLeader', 'Employee']),
 });
 
 export const insertSlotPricingSchema = createInsertSchema(slotPricing).omit({

@@ -2191,27 +2191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const rating = await storage.createRating(validatedRating);
         
-        const ratedUser = await storage.getUserById(validatedRating.userId);
-        
-        let ratingMessageType = 'team_leader_to_employee';
-        if (ratedUser) {
-          if (requestingUser.role === 'company_admin' && ratedUser.role === 'team_leader') {
-            ratingMessageType = 'admin_to_team_leader';
-          } else if (requestingUser.role === 'company_admin' && ratedUser.role === 'company_member') {
-            ratingMessageType = 'admin_to_employee';
-          } else if (requestingUser.role === 'team_leader' && ratedUser.role === 'company_member') {
-            ratingMessageType = 'team_leader_to_employee';
-          }
-        }
-        
-        await storage.createMessage({
-          senderId: requestingUser.id,
-          receiverId: validatedRating.userId,
-          message: `You received a new ${validatedRating.period} rating: ${validatedRating.rating}`,
-          messageType: ratingMessageType,
-          readStatus: false,
-        });
-        
+        // Ratings are now shown only in the Ratings Section, not in messages
         res.json(rating);
       } catch (dbError: any) {
         // Catch unique constraint violation (PostgreSQL error code 23505)
@@ -2272,6 +2252,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.json([]);
       }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Feedback routes
+  app.post("/api/feedbacks", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Validate request body first
+      const validatedInput = z.object({
+        recipientType: z.enum(['Admin', 'TeamLeader', 'Employee']),
+        message: z.string().min(1, "Message is required"),
+      }).parse(req.body);
+
+      const feedbackData = {
+        companyId: requestingUser.companyId,
+        submittedBy: requestingUser.id,
+        recipientType: validatedInput.recipientType,
+        message: validatedInput.message,
+        adminResponse: null,
+      };
+
+      const validatedFeedback = insertFeedbackSchema.parse(feedbackData);
+      const feedback = await storage.createFeedback(validatedFeedback);
+      
+      res.json(feedback);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/feedbacks", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let feedbacks;
+      if (requestingUser.role === 'super_admin') {
+        feedbacks = await storage.getAllFeedbacks();
+      } else if (requestingUser.role === 'company_admin' && requestingUser.companyId) {
+        feedbacks = await storage.getFeedbacksByCompanyId(requestingUser.companyId);
+      } else {
+        feedbacks = await storage.getFeedbacksByUserId(requestingUser.id);
+      }
+
+      res.json(feedbacks);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/feedbacks/:id/respond", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
+        return res.status(403).json({ message: "Only admins can respond to feedback" });
+      }
+
+      // Validate admin response
+      const validatedInput = z.object({
+        adminResponse: z.enum(['Good', 'Bad', 'Excellent', 'Satisfactory', 'Needs Improvement']),
+      }).parse(req.body);
+
+      // Get feedback by ID
+      const feedbackId = parseInt(req.params.id);
+      if (isNaN(feedbackId)) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+
+      const feedback = await storage.getFeedbackById(feedbackId);
+      
+      // Return generic 404 to prevent ID enumeration
+      if (!feedback) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+
+      // Verify company scoping (super_admin can respond to any, company_admin only to their company's)
+      if (requestingUser.role === 'company_admin' && feedback.companyId !== requestingUser.companyId) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+
+      await storage.respondToFeedback(feedbackId, validatedInput.adminResponse);
+      res.json({ message: "Response sent successfully" });
     } catch (error) {
       next(error);
     }

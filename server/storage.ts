@@ -136,6 +136,9 @@ export interface IStorage {
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
   getAllFeedbacks(): Promise<Feedback[]>;
   getFeedbacksByUserId(userId: number): Promise<Feedback[]>;
+  getFeedbacksByCompanyId(companyId: number): Promise<Feedback[]>;
+  getFeedbackById(id: number): Promise<Feedback | null>;
+  respondToFeedback(id: number, adminResponse: string): Promise<void>;
   
   // Slot pricing operations
   createOrUpdateSlotPricing(pricing: InsertSlotPricing): Promise<SlotPricing>;
@@ -427,7 +430,7 @@ export class DbStorage implements IStorage {
         inArray(fileUploads.userId, userIds)
       );
       await db.delete(feedbacks).where(
-        inArray(feedbacks.userId, userIds)
+        inArray(feedbacks.submittedBy, userIds)
       );
       await db.delete(archiveReports).where(
         inArray(archiveReports.userId, userIds)
@@ -874,8 +877,27 @@ export class DbStorage implements IStorage {
 
   async getFeedbacksByUserId(userId: number): Promise<Feedback[]> {
     return await db.select().from(feedbacks)
-      .where(eq(feedbacks.userId, userId))
+      .where(eq(feedbacks.submittedBy, userId))
       .orderBy(desc(feedbacks.createdAt));
+  }
+
+  async getFeedbacksByCompanyId(companyId: number): Promise<Feedback[]> {
+    return await db.select().from(feedbacks)
+      .where(eq(feedbacks.companyId, companyId))
+      .orderBy(desc(feedbacks.createdAt));
+  }
+
+  async getFeedbackById(id: number): Promise<Feedback | null> {
+    const result = await db.select().from(feedbacks)
+      .where(eq(feedbacks.id, id))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async respondToFeedback(id: number, adminResponse: string): Promise<void> {
+    await db.update(feedbacks)
+      .set({ adminResponse, respondedAt: new Date() })
+      .where(eq(feedbacks.id, id));
   }
 
   async createOrUpdateSlotPricing(pricing: InsertSlotPricing): Promise<SlotPricing> {
