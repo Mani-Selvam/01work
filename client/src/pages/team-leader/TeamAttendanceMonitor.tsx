@@ -10,10 +10,13 @@ import { useState } from "react";
 
 interface AttendanceRecord {
   userId: number;
-  displayName: string;
-  photoURL?: string;
-  clockIn?: string;
-  clockOut?: string;
+  userName: string | null;
+  userPhotoURL?: string | null;
+  checkIn?: Date | null;
+  checkOut?: Date | null;
+  clockIn?: string | null;
+  clockOut?: string | null;
+  workDuration?: number | null;
   totalHours?: number;
   status: string;
 }
@@ -46,7 +49,8 @@ export default function TeamAttendanceMonitor() {
     return `${h}h ${m}m`;
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name?: string) => {
+    if (!name) return "??";
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
@@ -153,13 +157,13 @@ export default function TeamAttendanceMonitor() {
                 >
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={member.photoURL} />
+                      <AvatarImage src={member.userPhotoURL || undefined} />
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        {getInitials(member.displayName)}
+                        {getInitials(member.userName || undefined)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium">{member.displayName}</p>
+                      <p className="font-medium">{member.userName || "Unknown"}</p>
                       <p className="text-sm text-muted-foreground">
                         {member.clockIn ? `In: ${formatTime(member.clockIn)}` : "Not clocked in"}
                         {member.clockOut && ` | Out: ${formatTime(member.clockOut)}`}

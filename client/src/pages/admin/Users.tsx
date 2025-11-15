@@ -67,11 +67,6 @@ export default function Users() {
   // Fetch all team assignments to show counts on team leader cards
   const { data: allTeamAssignments = [] } = useQuery<Array<{ teamLeaderId: number; memberId: number }>>({
     queryKey: ['/api/team-assignments'],
-    queryFn: async () => {
-      const response = await fetch('/api/team-assignments');
-      if (!response.ok) return [];
-      return response.json();
-    },
     enabled: userRole === 'company_admin',
   });
 
