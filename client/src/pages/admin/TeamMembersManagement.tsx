@@ -27,22 +27,12 @@ export default function TeamMembersManagement({ params }: TeamMembersManagementP
   const teamLeaderId = parseInt(params.teamLeaderId);
 
   const { data: teamLeader, isLoading: loadingLeader } = useQuery<User>({
-    queryKey: [`/api/users/${teamLeaderId}`],
-    queryFn: async () => {
-      const response = await fetch(`/api/users/${teamLeaderId}`);
-      if (!response.ok) throw new Error('Failed to fetch team leader');
-      return response.json();
-    },
+    queryKey: [`/api/users`, teamLeaderId.toString()],
     enabled: !!teamLeaderId && userRole === 'company_admin',
   });
 
   const { data: teamMembers = [], isLoading: loadingMembers } = useQuery<User[]>({
-    queryKey: [`/api/team-assignments/${teamLeaderId}/members`],
-    queryFn: async () => {
-      const response = await fetch(`/api/team-assignments/${teamLeaderId}/members`);
-      if (!response.ok) throw new Error('Failed to fetch team members');
-      return response.json();
-    },
+    queryKey: [`/api/team-assignments`, teamLeaderId.toString(), 'members'],
     enabled: !!teamLeaderId && userRole === 'company_admin',
   });
 
@@ -55,9 +45,9 @@ export default function TeamMembersManagement({ params }: TeamMembersManagementP
         title: "Success",
         description: "Team member removed successfully. They are now unallocated.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/team-assignments/${teamLeaderId}/members`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/team-assignments`, teamLeaderId.toString(), 'members'] });
       queryClient.invalidateQueries({ queryKey: ['/api/team-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users?includeDeleted=true'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
     },
     onError: (error) => {
       toast({
