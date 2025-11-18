@@ -32,9 +32,7 @@ export default function LeadManagement() {
   
   const deleteMutation = useMutation({
     mutationFn: async (leadId: number) => {
-      await apiRequest(`/api/leads/${leadId}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/leads/${leadId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });

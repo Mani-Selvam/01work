@@ -56,7 +56,7 @@ export default function LeadEntryForm({ teamLeaders, onSuccess }: LeadEntryFormP
     expectedCloseDate: "",
     notes: "",
     
-    assignedTo: "",
+    assignedTo: "unassigned",
   });
   
   const updateFormData = (field: keyof LeadFormData, value: string) => {
@@ -147,13 +147,10 @@ export default function LeadEntryForm({ teamLeaders, onSuccess }: LeadEntryFormP
         dealValue: formData.dealValue ? parseInt(formData.dealValue) : undefined,
         expectedCloseDate: formData.expectedCloseDate || undefined,
         notes: formData.notes || undefined,
-        assignedTo: formData.assignedTo ? parseInt(formData.assignedTo) : undefined,
+        assignedTo: formData.assignedTo && formData.assignedTo !== "unassigned" ? parseInt(formData.assignedTo) : undefined,
       };
       
-      await apiRequest("/api/leads", {
-        method: "POST",
-        body: leadData,
-      });
+      await apiRequest("/api/leads", "POST", leadData);
       
       await queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       
@@ -179,7 +176,7 @@ export default function LeadEntryForm({ teamLeaders, onSuccess }: LeadEntryFormP
         dealValue: "",
         expectedCloseDate: "",
         notes: "",
-        assignedTo: "",
+        assignedTo: "unassigned",
       });
       setCurrentStep(1);
     } catch (error: any) {
@@ -440,7 +437,7 @@ export default function LeadEntryForm({ teamLeaders, onSuccess }: LeadEntryFormP
                     <SelectValue placeholder="Select team leader" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {teamLeaders.map((leader) => (
                       <SelectItem key={leader.id} value={leader.id.toString()}>
                         {leader.displayName} ({leader.email})
