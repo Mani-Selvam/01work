@@ -1,7 +1,7 @@
 ﻿import { db } from "./db";
 import { 
   companies, users, tasks, reports, messages, ratings, fileUploads, archiveReports, groupMessages, groupMessageReplies, taskTimeLogs, feedbacks, slotPricing, companyPayments, passwordResetTokens, adminActivityLogs, badges, autoTasks, leaves, holidays, tasksReports,
-  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments,
+  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments, leads,
   type Company, type InsertCompany,
   type User, type InsertUser,
   type Task, type InsertTask,
@@ -31,6 +31,7 @@ import {
   type Reward, type InsertReward,
   type AttendanceLog, type InsertAttendanceLog,
   type TeamAssignment, type InsertTeamAssignment,
+  type Lead, type InsertLead,
 } from "@shared/schema";
 import { eq, and, or, desc, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -290,6 +291,14 @@ export interface IStorage {
   getTeamLeaderByMember(memberId: number): Promise<User | null>;
   getAllTeamAssignments(companyId: number): Promise<TeamAssignment[]>;
   getTeamAssignmentsByMemberId(memberId: number): Promise<TeamAssignment[]>;
+  
+  // Lead operations
+  createLead(lead: InsertLead): Promise<Lead>;
+  getLeadById(id: number): Promise<Lead | null>;
+  getLeadsByCompanyId(companyId: number): Promise<Lead[]>;
+  getLeadsByAssignedTo(assignedTo: number): Promise<Lead[]>;
+  updateLead(id: number, updates: Partial<InsertLead>): Promise<Lead>;
+  deleteLead(id: number): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -1774,6 +1783,41 @@ export class DbStorage implements IStorage {
         sql`${teamAssignments.removedAt} IS NULL`
       ))
       .orderBy(desc(teamAssignments.assignedAt));
+  }
+  
+  // Lead Management
+  async createLead(lead: InsertLead): Promise<Lead> {
+    const result = await db.insert(leads).values(lead).returning();
+    return result[0];
+  }
+  
+  async getLeadById(id: number): Promise<Lead | null> {
+    const result = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    return result[0] || null;
+  }
+  
+  async getLeadsByCompanyId(companyId: number): Promise<Lead[]> {
+    return await db.select().from(leads)
+      .where(eq(leads.companyId, companyId))
+      .orderBy(desc(leads.createdAt));
+  }
+  
+  async getLeadsByAssignedTo(assignedTo: number): Promise<Lead[]> {
+    return await db.select().from(leads)
+      .where(eq(leads.assignedTo, assignedTo))
+      .orderBy(desc(leads.createdAt));
+  }
+  
+  async updateLead(id: number, updates: Partial<InsertLead>): Promise<Lead> {
+    const result = await db.update(leads)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(leads.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteLead(id: number): Promise<void> {
+    await db.delete(leads).where(eq(leads.id, id));
   }
 }
 

@@ -361,6 +361,29 @@ export const teamAssignments = pgTable("team_assignments", {
   uniqueAssignment: sql`UNIQUE (team_leader_id, member_id, company_id, COALESCE(removed_at, '1970-01-01'))`,
 }));
 
+export const leads = pgTable("leads", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  contactName: varchar("contact_name", { length: 255 }).notNull(),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull(),
+  contactPhone: varchar("contact_phone", { length: 20 }),
+  companyName: varchar("company_name", { length: 255 }).notNull(),
+  website: text("website"),
+  industryType: varchar("industry_type", { length: 100 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("new"),
+  source: varchar("source", { length: 50 }),
+  priority: varchar("priority", { length: 20 }).notNull().default("medium"),
+  dealValue: integer("deal_value"),
+  expectedCloseDate: varchar("expected_close_date", { length: 10 }),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  notes: text("notes"),
+  followUpNotes: text("follow_up_notes"),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  updatedBy: integer("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
   serverId: true,
@@ -717,3 +740,29 @@ export const insertTeamAssignmentSchema = createInsertSchema(teamAssignments).om
 
 export type InsertTeamAssignment = z.infer<typeof insertTeamAssignmentSchema>;
 export type TeamAssignment = typeof teamAssignments.$inferSelect;
+
+export const insertLeadSchema = createInsertSchema(leads).omit({
+  id: true,
+  companyId: true,
+  createdBy: true,
+  updatedBy: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  status: z.enum(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  source: z.enum(['website', 'referral', 'cold_call', 'social_media', 'email_campaign', 'trade_show', 'other']).optional(),
+  industryType: z.enum(['technology', 'healthcare', 'finance', 'manufacturing', 'retail', 'education', 'real_estate', 'hospitality', 'construction', 'transportation', 'other']),
+});
+
+export const updateLeadAdminSchema = insertLeadSchema.partial();
+
+export const updateLeadTeamLeaderSchema = z.object({
+  status: z.enum(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']).optional(),
+  followUpNotes: z.string().optional(),
+});
+
+export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type UpdateLeadAdmin = z.infer<typeof updateLeadAdminSchema>;
+export type UpdateLeadTeamLeader = z.infer<typeof updateLeadTeamLeaderSchema>;
+export type Lead = typeof leads.$inferSelect;

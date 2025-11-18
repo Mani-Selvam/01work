@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { broadcast } from "./index";
-import { insertCompanySchema, insertUserSchema, insertTaskSchema, insertReportSchema, insertMessageSchema, insertRatingSchema, insertFileUploadSchema, insertGroupMessageSchema, insertGroupMessageReplySchema, insertFeedbackSchema, loginSchema, signupSchema, firebaseSigninSchema, companyRegistrationSchema, companyBasicRegistrationSchema, superAdminLoginSchema, companyAdminLoginSchema, companyUserLoginSchema, insertSlotPricingSchema, insertCompanyPaymentSchema, updatePaymentStatusSchema, slotPurchaseSchema, passwordResetRequestSchema, passwordResetSchema, insertAttendanceRecordSchema, insertCorrectionRequestSchema } from "@shared/schema";
+import { insertCompanySchema, insertUserSchema, insertTaskSchema, insertReportSchema, insertMessageSchema, insertRatingSchema, insertFileUploadSchema, insertGroupMessageSchema, insertGroupMessageReplySchema, insertFeedbackSchema, loginSchema, signupSchema, firebaseSigninSchema, companyRegistrationSchema, companyBasicRegistrationSchema, superAdminLoginSchema, companyAdminLoginSchema, companyUserLoginSchema, insertSlotPricingSchema, insertCompanyPaymentSchema, updatePaymentStatusSchema, slotPurchaseSchema, passwordResetRequestSchema, passwordResetSchema, insertAttendanceRecordSchema, insertCorrectionRequestSchema, insertLeadSchema, updateLeadAdminSchema, updateLeadTeamLeaderSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { sendReportNotification, sendCompanyServerIdEmail, sendUserIdEmail, sendPasswordResetEmail, sendPaymentConfirmationEmail, sendCompanyVerificationEmail } from "./email";
@@ -4503,6 +4503,190 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(policy);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Lead Management Routes
+  app.post("/api/leads", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "User or company not found" });
+      }
+      
+      if (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin') {
+        return res.status(403).json({ message: "Only admins can create leads" });
+      }
+      
+      const validatedData = insertLeadSchema.parse(req.body);
+      
+      if (validatedData.assignedTo) {
+        const assignedUser = await storage.getUserById(validatedData.assignedTo);
+        if (!assignedUser || assignedUser.companyId !== requestingUser.companyId) {
+          return res.status(400).json({ message: "Cannot assign lead to user from different company" });
+        }
+        if (assignedUser.role !== 'team_leader') {
+          return res.status(400).json({ message: "Can only assign leads to team leaders" });
+        }
+      }
+      
+      const lead = await storage.createLead({
+        ...validatedData,
+        companyId: requestingUser.companyId,
+        createdBy: requestingUserId,
+      });
+      
+      res.status(201).json(lead);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      next(error);
+    }
+  });
+  
+  app.get("/api/leads", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "User or company not found" });
+      }
+      
+      let leadsList;
+      if (requestingUser.role === 'team_leader') {
+        const allAssignedLeads = await storage.getLeadsByAssignedTo(requestingUserId);
+        leadsList = allAssignedLeads.filter(lead => lead.companyId === requestingUser.companyId);
+      } else if (requestingUser.role === 'company_admin' || requestingUser.role === 'super_admin') {
+        leadsList = await storage.getLeadsByCompanyId(requestingUser.companyId);
+      } else {
+        return res.status(403).json({ message: "Unauthorized to view leads" });
+      }
+      
+      res.json(leadsList);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get("/api/leads/:id", requireAuth, async (req, res, next) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const lead = await storage.getLeadById(leadId);
+      
+      if (!lead || lead.companyId !== requestingUser.companyId) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      
+      if (requestingUser.role === 'team_leader' && lead.assignedTo !== requestingUserId) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      
+      res.json(lead);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.patch("/api/leads/:id", requireAuth, async (req, res, next) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const lead = await storage.getLeadById(leadId);
+      
+      if (!lead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      
+      if (lead.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Unauthorized to update this lead" });
+      }
+      
+      let validatedData;
+      
+      if (requestingUser.role === 'team_leader') {
+        if (lead.assignedTo !== requestingUserId) {
+          return res.status(403).json({ message: "Unauthorized to update this lead" });
+        }
+        validatedData = updateLeadTeamLeaderSchema.parse(req.body);
+      } else if (requestingUser.role === 'company_admin' || requestingUser.role === 'super_admin') {
+        validatedData = updateLeadAdminSchema.parse(req.body);
+        
+        if (validatedData.assignedTo !== undefined) {
+          if (validatedData.assignedTo === null) {
+            // Allow unassignment
+          } else {
+            const assignedUser = await storage.getUserById(validatedData.assignedTo);
+            if (!assignedUser || assignedUser.companyId !== requestingUser.companyId) {
+              return res.status(400).json({ message: "Cannot assign lead to user from different company" });
+            }
+            if (assignedUser.role !== 'team_leader') {
+              return res.status(400).json({ message: "Can only assign leads to team leaders" });
+            }
+          }
+        }
+      } else {
+        return res.status(403).json({ message: "Unauthorized to update leads" });
+      }
+      
+      const updatedLead = await storage.updateLead(leadId, {
+        ...validatedData,
+        updatedBy: requestingUserId,
+      });
+      
+      res.json(updatedLead);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      next(error);
+    }
+  });
+  
+  app.delete("/api/leads/:id", requireAuth, async (req, res, next) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin') {
+        return res.status(403).json({ message: "Only admins can delete leads" });
+      }
+      
+      const lead = await storage.getLeadById(leadId);
+      
+      if (!lead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      
+      if (lead.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Unauthorized to delete this lead" });
+      }
+      
+      await storage.deleteLead(leadId);
+      res.status(204).send();
     } catch (error) {
       next(error);
     }

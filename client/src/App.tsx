@@ -45,6 +45,7 @@ import AdminFeedback from "@/pages/admin/AdminFeedback";
 import CompanyManagement from "@/pages/admin/CompanyManagement";
 import CompanyProfile from "@/pages/admin/CompanyProfile";
 import PaymentHistory from "@/pages/admin/PaymentHistory";
+import LeadManagement from "@/pages/admin/LeadManagement";
 import SuperAdminDashboard from "@/pages/super-admin/SuperAdminDashboard";
 import PaymentTracking from "@/pages/super-admin/PaymentTracking";
 import ActivityLogs from "@/pages/super-admin/ActivityLogs";
@@ -62,6 +63,7 @@ import TeamLeaderPrivateMessages from "@/pages/team-leader/TeamLeaderPrivateMess
 import TeamLeaderAnnouncements from "@/pages/team-leader/TeamLeaderAnnouncements";
 import TeamRatings from "@/pages/team-leader/TeamRatings";
 import TeamFeedback from "@/pages/team-leader/TeamFeedback";
+import TeamLeaderLeads from "@/pages/team-leader/TeamLeaderLeads";
 
 function ProtectedRoute({ component: Component, allowedRole }: { component: any; allowedRole?: "admin" | "user" | "super_admin" | "team_leader" }) {
   const { user, loading, userRole } = useAuth();
@@ -244,6 +246,9 @@ function Router() {
       <Route path="/admin/payment-history">
         {() => <ProtectedRoute component={() => <AdminLayout><PaymentHistory /></AdminLayout>} allowedRole="admin" />}
       </Route>
+      <Route path="/admin/leads">
+        {() => <ProtectedRoute component={() => <AdminLayout><LeadManagement /></AdminLayout>} allowedRole="admin" />}
+      </Route>
       <Route path="/admin">
         <Redirect to="/admin/dashboard" />
       </Route>
@@ -300,6 +305,9 @@ function Router() {
       </Route>
       <Route path="/team-leader/feedback">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamFeedback /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      </Route>
+      <Route path="/team-leader/leads">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderLeads /></TeamLeaderLayout>} allowedRole="team_leader" />}
       </Route>
       <Route path="/team-leader">
         <Redirect to="/team-leader/dashboard" />
