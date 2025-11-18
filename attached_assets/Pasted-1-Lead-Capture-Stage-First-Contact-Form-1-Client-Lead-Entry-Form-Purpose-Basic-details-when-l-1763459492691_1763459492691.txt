@@ -1,0 +1,184 @@
+1️⃣ Lead Capture Stage (First Contact)
+Form 1: Client Lead Entry Form
+
+Purpose: Basic details when lead first comes.
+
+Fields:
+
+Client Name
+
+Company Name
+
+Mobile Number
+
+Email
+
+Required Service (Web development / App / Marketing / Others)
+
+Lead Source (Website / WhatsApp / Referral / Direct / Social Media)
+
+Budget Range
+
+Location
+
+Notes / Requirements
+
+Lead Status: New
+
+2️⃣ Lead Qualification Stage
+Form 2: Requirement Collection Form (Detailed Enquiry Form)
+
+Purpose: Collect complete project requirements.
+
+Fields:
+
+Project Type (Website / App / CRM / ERP / etc.)
+
+Full Requirement Description
+
+Pages / Modules list
+
+Design Preference
+
+Competitor Reference Links
+
+Deadline
+
+Special Features required
+
+Client Priority (High / Medium / Low)
+
+Qualification Status: Qualified / Not Qualified
+
+3️⃣ Communication & Follow-up Stage
+Form 3: Follow-up Tracker Form
+
+Purpose: Track every client communication.
+
+Fields:
+
+Client Name
+
+Follow-up Date
+
+Conversation Notes
+
+Next Follow-up Date
+
+Shared Documents? (Yes/No)
+
+Lead Status (In Follow-up / Waiting for Client / Not Interested / Move to Quotation)
+
+4️⃣ Document Sharing Stage
+Form 4: Document Sharing Form
+
+Purpose: When you send anything to the client.
+
+Fields:
+
+Client Name
+
+Documents Shared (Company Profile / Portfolio / Scope / PPT / PDF / Proposal)
+
+Shared Date
+
+Shared By
+
+Client Response (Accepted / Rejected / Pending)
+
+5️⃣ Quotation Stage
+Form 5: Quotation Request Form
+
+Purpose: To prepare quotation.
+
+Fields:
+
+Client Name
+
+Required Modules
+
+Total Effort
+
+Timeline
+
+Estimated Cost
+
+Assigned To (Your HR / Manager)
+
+6️⃣ Meeting Scheduling Stage
+Form 6: Meeting Scheduling Form
+
+Purpose: For demo or detailed discussion.
+
+Fields:
+
+Client Name
+
+Meeting Type (Zoom / Google Meet / Office Visit / Client Visit)
+
+Date
+
+Time
+
+Agenda (Project Demo / Rate Discussion / Final Confirmation)
+
+Meeting Status: Scheduled / Completed
+
+7️⃣ Proposal / SOW Stage
+Form 7: Project Proposal Submission Form
+
+Purpose: After sharing quotation & documents.
+
+Fields:
+
+Client Name
+
+Proposal Type (Basic / Detailed / Custom SOW)
+
+Date Sent
+
+Attach Proposal
+
+Approval Status (Approved / Negotiation / Rejected)
+
+8️⃣ Final Confirmation Stage
+Form 8: Client Approval / Confirmation Form
+
+Purpose: When client confirms the project.
+
+Fields:
+
+Client Name
+
+Approved Modules
+
+Final Cost
+
+Advance Payment Terms
+
+Start Date
+
+Confirmation Notes
+
+Status: Confirmed
+
+9️⃣ Project Begin Stage
+Form 9: Project Kickoff Form
+
+Purpose: Hand over to development team.
+
+Fields:
+
+Client Name
+
+Project Manager
+
+Team Assigned
+
+Modules Summary
+
+Timeline
+
+Kickoff Date
+
+Attach Requirements Document (FRD)

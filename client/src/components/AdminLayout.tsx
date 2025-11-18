@@ -90,9 +90,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (isCompanyAdmin && user && companyId) {
       const profileCompleteKey = `companyProfileComplete_${companyId}`;
+      const profileDismissedKey = `companySetupDismissed_${companyId}`;
       const isProfileComplete = localStorage.getItem(profileCompleteKey) === 'true';
+      const isSetupDismissed = localStorage.getItem(profileDismissedKey) === 'true';
       
-      if (!isProfileComplete && !(user as any).companyProfileComplete) {
+      if (!isProfileComplete && !isSetupDismissed && !(user as any).companyProfileComplete) {
         setShowProfileSetup(true);
       }
     }
@@ -225,7 +227,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           companyId={companyId}
           companyName={user.displayName || ""}
           onComplete={handleProfileSetupComplete}
-          onClose={() => setShowProfileSetup(false)}
+          onClose={() => {
+            setShowProfileSetup(false);
+            const profileDismissedKey = `companySetupDismissed_${companyId}`;
+            localStorage.setItem(profileDismissedKey, 'true');
+          }}
         />
       )}
     </>
