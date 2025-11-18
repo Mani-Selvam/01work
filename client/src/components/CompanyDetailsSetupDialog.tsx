@@ -40,13 +40,15 @@ interface CompanyDetailsSetupDialogProps {
   companyId: number;
   companyName: string;
   onComplete: () => void;
+  onClose?: () => void;
 }
 
 export default function CompanyDetailsSetupDialog({ 
   open, 
   companyId, 
   companyName,
-  onComplete 
+  onComplete,
+  onClose
 }: CompanyDetailsSetupDialogProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,7 +146,11 @@ export default function CompanyDetailsSetupDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen && onClose) {
+        onClose();
+      }
+    }}>
       <DialogContent className="sm:max-w-[550px]" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
