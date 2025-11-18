@@ -1,0 +1,176 @@
+✅ Client Lead Workflow – Day-by-Day / Step-by-Step Process
+
+This explains:
+Client fills → What happens → Next day → Next step → Until project starts
+
+🟦 DAY 1 — Lead Entry Stage
+✔️ Form 1: Client Lead Entry Form
+
+Client or Admin fills the basic details.
+
+System Action:
+
+Lead is created with status NEW
+
+Assigned to Company Admin / TL
+
+CRM adds this lead to Today Follow-up List
+
+Next Step (Tomorrow):
+→ Move to Requirement Collection Stage
+
+🟩 DAY 2 — Requirement Collection
+✔️ Form 2: Requirement Collection (Detailed Enquiry)
+
+Admin/TL calls the client and collects full requirements.
+
+System Action:
+
+Save all detailed requirements
+
+Update Status → REQUIREMENTS RECEIVED
+
+Auto-create Follow-up Task for next day
+
+Attach requirement documents (if any)
+
+Next Step (Tomorrow):
+→ Start Follow-up & Communication Stage
+
+🟧 DAY 3 — Follow-up & Communication Stage
+✔️ Form 3: Follow-up Tracker
+
+Admin/TL updates:
+
+System Action:
+
+Conversation saved
+
+Next follow-up date scheduled
+
+Lead Status updated:
+→ In Follow-up / Waiting / Move to Quotation
+
+If client asked documents → Move to Document Sharing
+
+Next Step:
+If client needs company details → Go to Document Sharing
+If client is ready for quotation → Go to Quotation Stage
+
+🟨 DAY 4 — Document Sharing Stage
+✔️ Form 4: Document Sharing Form
+
+Send company profile, portfolio, proposal samples.
+
+System Action:
+
+Document logs saved
+
+Client response tracked
+
+Lead Status → DOCUMENT SHARED
+
+Next Step (Tomorrow):
+→ Ask if client is ready for Quotation
+If yes → Move to Quotation Stage
+
+🟥 DAY 5 — Quotation Preparation Stage
+✔️ Form 5: Quotation Request Form
+
+Admin prepares quotation based on requirements.
+
+System Action:
+
+Calculate cost
+
+Estimate timeline
+
+Assign to HR/Manager for approval
+
+Lead Status → QUOTATION PREPARING
+
+Next Step:
+→ After approval → Send quotation to client
+→ Move to Meeting Scheduling
+
+🟪 DAY 6 — Meeting Scheduling Stage
+✔️ Form 6: Meeting Scheduling Form
+
+A meeting/demo/quotation explanation is arranged.
+
+System Action:
+
+Meeting details saved
+
+Notifications sent
+
+Lead Status → MEETING SCHEDULED
+
+Next Step:
+→ After meeting → Move to Proposal Submission
+
+🟫 DAY 7 — Proposal / SOW Stage
+✔️ Form 7: Project Proposal Submission Form
+
+Share final SOW / PDF proposal.
+
+System Action:
+
+Proposal uploaded
+
+Share date stored
+
+Status → PROPOSAL SENT
+
+Next Step:
+→ Waiting for client confirmation
+→ Move to Approval Stage
+
+⬛ DAY 8 — Client Approval Stage
+✔️ Form 8: Client Approval / Confirmation Form
+
+Client approves project & cost.
+
+System Action:
+
+Final cost locked
+
+Payment terms saved
+
+Status → CONFIRMED
+
+Auto-create Project Kickoff Task for next day
+
+Next Step:
+→ Move to Project Kickoff Stage
+
+🟫 DAY 9 — Project Kickoff Stage
+✔️ Form 9: Project Kickoff Form
+
+Project is handed to development team.
+
+System Action:
+
+Team assigned
+
+Start date fixed
+
+Documents attached
+
+Status → PROJECT STARTED
+
+Final Step:
+→ Lead is converted to Project
+→ Lead Stage closed
+
+🎉 Summary (Very Simple Version)
+Day	Step	Status
+1	Lead Entry	New
+2	Requirement Collection	Requirements Received
+3	Follow-up	In Follow-up
+4	Documents Sharing	Document Shared
+5	Quotation	Quotation Preparing
+6	Meeting	Meeting Scheduled
+7	Proposal	Proposal Sent
+8	Client Approval	Confirmed
+9	Kickoff	Project Started

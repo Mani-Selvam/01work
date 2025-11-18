@@ -370,18 +370,57 @@ export const leads = pgTable("leads", {
   companyName: varchar("company_name", { length: 255 }).notNull(),
   website: text("website"),
   industryType: varchar("industry_type", { length: 100 }).notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("new"),
+  
+  currentStage: integer("current_stage").notNull().default(1),
+  status: varchar("status", { length: 50 }).notNull().default("new"),
   source: varchar("source", { length: 50 }),
   priority: varchar("priority", { length: 20 }).notNull().default("medium"),
   dealValue: integer("deal_value"),
   expectedCloseDate: varchar("expected_close_date", { length: 10 }),
+  
   assignedTo: integer("assigned_to").references(() => users.id),
   notes: text("notes"),
   followUpNotes: text("follow_up_notes"),
+  nextFollowUpDate: timestamp("next_follow_up_date"),
+  
   createdBy: integer("created_by").references(() => users.id).notNull(),
   updatedBy: integer("updated_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const leadStageData = pgTable("lead_stage_data", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  stage: integer("stage").notNull(),
+  stageData: text("stage_data"),
+  completedAt: timestamp("completed_at"),
+  completedBy: integer("completed_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const leadDocuments = pgTable("lead_documents", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  stage: integer("stage").notNull(),
+  documentName: varchar("document_name", { length: 255 }).notNull(),
+  documentUrl: text("document_url").notNull(),
+  documentType: varchar("document_type", { length: 50 }),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const leadHistory = pgTable("lead_history", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  action: varchar("action", { length: 100 }).notNull(),
+  stage: integer("stage"),
+  oldStatus: varchar("old_status", { length: 50 }),
+  newStatus: varchar("new_status", { length: 50 }),
+  notes: text("notes"),
+  performedBy: integer("performed_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertCompanySchema = createInsertSchema(companies).omit({
@@ -748,21 +787,52 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   updatedBy: true,
   createdAt: true,
   updatedAt: true,
+  currentStage: true,
+  nextFollowUpDate: true,
 }).extend({
-  status: z.enum(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']),
+  status: z.enum(['new', 'requirements_received', 'in_follow_up', 'document_shared', 'quotation_preparing', 'meeting_scheduled', 'proposal_sent', 'confirmed', 'project_started', 'lost']),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   source: z.enum(['website', 'referral', 'cold_call', 'social_media', 'email_campaign', 'trade_show', 'other']).optional(),
   industryType: z.enum(['technology', 'healthcare', 'finance', 'manufacturing', 'retail', 'education', 'real_estate', 'hospitality', 'construction', 'transportation', 'other']),
 });
 
-export const updateLeadAdminSchema = insertLeadSchema.partial();
+export const updateLeadAdminSchema = insertLeadSchema.partial().extend({
+  currentStage: z.number().min(1).max(9).optional(),
+  nextFollowUpDate: z.string().optional(),
+});
 
 export const updateLeadTeamLeaderSchema = z.object({
-  status: z.enum(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']).optional(),
+  status: z.enum(['new', 'requirements_received', 'in_follow_up', 'document_shared', 'quotation_preparing', 'meeting_scheduled', 'proposal_sent', 'confirmed', 'project_started', 'lost']).optional(),
   followUpNotes: z.string().optional(),
+  nextFollowUpDate: z.string().optional(),
+});
+
+export const insertLeadStageDataSchema = createInsertSchema(leadStageData).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export const insertLeadDocumentSchema = createInsertSchema(leadDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLeadHistorySchema = createInsertSchema(leadHistory).omit({
+  id: true,
+  createdAt: true,
 });
 
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type UpdateLeadAdmin = z.infer<typeof updateLeadAdminSchema>;
 export type UpdateLeadTeamLeader = z.infer<typeof updateLeadTeamLeaderSchema>;
 export type Lead = typeof leads.$inferSelect;
+
+export type InsertLeadStageData = z.infer<typeof insertLeadStageDataSchema>;
+export type LeadStageData = typeof leadStageData.$inferSelect;
+
+export type InsertLeadDocument = z.infer<typeof insertLeadDocumentSchema>;
+export type LeadDocument = typeof leadDocuments.$inferSelect;
+
+export type InsertLeadHistory = z.infer<typeof insertLeadHistorySchema>;
+export type LeadHistory = typeof leadHistory.$inferSelect;

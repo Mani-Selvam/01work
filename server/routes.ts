@@ -4692,6 +4692,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Lead Stage Data Routes
+  app.post("/api/lead-stage-data", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { leadId, stage, stageData } = req.body;
+      
+      const lead = await storage.getLeadById(leadId);
+      if (!lead || lead.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const stageDataEntry = await storage.createLeadStageData({
+        leadId,
+        stage,
+        stageData,
+        completedBy: requestingUserId,
+      });
+      
+      res.status(201).json(stageDataEntry);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/lead-stage-data/:leadId", requireAuth, async (req, res, next) => {
+    try {
+      const leadId = parseInt(req.params.leadId);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const lead = await storage.getLeadById(leadId);
+      if (!lead || lead.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const stageData = await storage.getLeadStageData(leadId);
+      res.json(stageData);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Lead Documents Routes
+  app.post("/api/lead-documents", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { leadId, stage, documentName, documentUrl, documentType, notes } = req.body;
+      
+      const lead = await storage.getLeadById(leadId);
+      if (!lead || lead.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const document = await storage.createLeadDocument({
+        leadId,
+        stage,
+        documentName,
+        documentUrl,
+        documentType,
+        uploadedBy: requestingUserId,
+        notes,
+      });
+      
+      res.status(201).json(document);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/lead-documents/:leadId", requireAuth, async (req, res, next) => {
+    try {
+      const leadId = parseInt(req.params.leadId);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const lead = await storage.getLeadById(leadId);
+      if (!lead || lead.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const documents = await storage.getLeadDocuments(leadId);
+      res.json(documents);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Lead History Routes
+  app.post("/api/lead-history", requireAuth, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { leadId, action, stage, oldStatus, newStatus, notes } = req.body;
+      
+      const lead = await storage.getLeadById(leadId);
+      if (!lead || lead.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const historyEntry = await storage.createLeadHistory({
+        leadId,
+        action,
+        stage,
+        oldStatus,
+        newStatus,
+        notes,
+        performedBy: requestingUserId,
+      });
+      
+      res.status(201).json(historyEntry);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/lead-history/:leadId", requireAuth, async (req, res, next) => {
+    try {
+      const leadId = parseInt(req.params.leadId);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const lead = await storage.getLeadById(leadId);
+      if (!lead || lead.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const history = await storage.getLeadHistory(leadId);
+      res.json(history);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
