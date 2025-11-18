@@ -223,6 +223,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           companyId={companyId}
           companyName={user.displayName || ""}
           onComplete={handleProfileSetupComplete}
+          onClose={() => setShowProfileSetup(false)}
         />
       )}
     </>
