@@ -67,6 +67,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserRole(id: number, role: string): Promise<void>;
   updateUserPassword(id: number, password: string): Promise<void>;
+  toggleUserStatus(id: number, isActive: boolean): Promise<void>;
   getAllUsers(includeDeleted?: boolean): Promise<User[]>;
   deleteUser(id: number): Promise<void>;
   softDeleteUser(id: number): Promise<void>;
@@ -494,6 +495,10 @@ export class DbStorage implements IStorage {
 
   async updateUserPassword(id: number, password: string): Promise<void> {
     await db.update(users).set({ password }).where(eq(users.id, id));
+  }
+
+  async toggleUserStatus(id: number, isActive: boolean): Promise<void> {
+    await db.update(users).set({ isActive }).where(eq(users.id, id));
   }
 
   async getAllUsers(includeDeleted: boolean = false): Promise<User[]> {

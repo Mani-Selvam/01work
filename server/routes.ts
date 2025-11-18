@@ -866,7 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/users/:id", async (req, res, next) => {
+  app.patch("/api/users/:id/status", async (req, res, next) => {
     try {
       const requestingUserId = req.headers['x-user-id'];
       
@@ -877,13 +877,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
       
       if (!requestingUser || (requestingUser.role !== 'company_admin' && requestingUser.role !== 'super_admin')) {
-        return res.status(403).json({ message: "Only admins can delete users" });
+        return res.status(403).json({ message: "Only admins can change user status" });
       }
       
       const userId = parseInt(req.params.id);
       
       if (userId === requestingUser.id) {
-        return res.status(400).json({ message: "Cannot delete your own account" });
+        return res.status(400).json({ message: "Cannot change your own account status" });
       }
 
       const targetUser = await storage.getUserById(userId);
@@ -891,20 +891,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Company scoping: admins can only delete users in their company (or all if super_admin)
+      // Company scoping: admins can only modify users in their company (or all if super_admin)
       if (requestingUser.role !== 'super_admin' && targetUser.companyId !== requestingUser.companyId) {
         return res.status(403).json({ message: "Access denied" });
       }
+
+      const { isActive } = req.body;
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
       
-      await storage.softDeleteUser(userId);
+      await storage.toggleUserStatus(userId, isActive);
       
       const { broadcast } = await import("./index");
       if (broadcast) {
-        broadcast({ type: 'USER_DELETED', userId });
+        if (!isActive) {
+          broadcast({ type: 'USER_SUSPENDED', userId });
+        }
         broadcast({ type: 'USERS_UPDATED' });
       }
       
-      res.json({ message: "User removed successfully" });
+      res.json({ message: `User ${isActive ? 'activated' : 'suspended'} successfully` });
     } catch (error) {
       next(error);
     }

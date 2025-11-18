@@ -16,7 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@shared/schema";
-import { Plus, Users as UsersIcon, Copy, CheckCircle, Users2, Search, MoreVertical, Eye, Trash2, UserCircle } from "lucide-react";
+import { Plus, Users as UsersIcon, Copy, CheckCircle, Users2, Search, MoreVertical, Eye, Ban, CheckCircle2, UserCircle } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface CompanyData {
@@ -71,7 +71,7 @@ export default function Users() {
   });
 
   const activeUsers = allUsers.filter(u => u.isActive !== false);
-  const deletedUsers = allUsers.filter(u => u.isActive === false);
+  const suspendedUsers = allUsers.filter(u => u.isActive === false);
 
   const adminSlots = company 
     ? { current: company.currentAdmins, max: company.maxAdmins, available: company.maxAdmins - company.currentAdmins }
@@ -80,21 +80,21 @@ export default function Users() {
     ? { current: company.currentMembers, max: company.maxMembers, available: company.maxMembers - company.currentMembers }
     : null;
 
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      return await apiRequest(`/api/users/${userId}`, 'DELETE');
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: number; isActive: boolean }) => {
+      return await apiRequest(`/api/users/${userId}/status`, 'PATCH', { isActive });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users?includeDeleted=true'] });
       queryClient.invalidateQueries({ queryKey: ['/api/my-company'] });
       toast({
-        title: "User removed successfully",
-        description: "The user has been deleted from the system.",
+        title: `User ${variables.isActive ? 'activated' : 'suspended'} successfully`,
+        description: `The user has been ${variables.isActive ? 'activated' : 'suspended'}.`,
       });
     },
     onError: (error) => {
       toast({
-        title: "Failed to remove user",
+        title: "Failed to update user status",
         description: error.message || "Please try again.",
         variant: "destructive",
       });
@@ -374,12 +374,12 @@ export default function Users() {
                             )}
                             <DropdownMenuItem 
                               className="text-destructive"
-                              onClick={() => deleteUserMutation.mutate(user.id)}
-                              disabled={deleteUserMutation.isPending}
-                              data-testid={`menu-remove-user-${user.id}`}
+                              onClick={() => toggleUserStatusMutation.mutate({ userId: user.id, isActive: false })}
+                              disabled={toggleUserStatusMutation.isPending}
+                              data-testid={`menu-suspend-user-${user.id}`}
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remove
+                              <Ban className="h-4 w-4 mr-2" />
+                              Suspend
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -414,11 +414,11 @@ export default function Users() {
                           variant="ghost" 
                           size="sm" 
                           className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs h-8"
-                          data-testid={`button-remove-user-${user.id}`}
-                          onClick={() => deleteUserMutation.mutate(user.id)}
-                          disabled={deleteUserMutation.isPending}
+                          data-testid={`button-suspend-user-${user.id}`}
+                          onClick={() => toggleUserStatusMutation.mutate({ userId: user.id, isActive: false })}
+                          disabled={toggleUserStatusMutation.isPending}
                         >
-                          {deleteUserMutation.isPending ? "..." : "Remove"}
+                          {toggleUserStatusMutation.isPending ? "..." : "Suspend"}
                         </Button>
                       </div>
                     )}
@@ -434,15 +434,15 @@ export default function Users() {
         </CardContent>
       </Card>
 
-      {deletedUsers.length > 0 && (
+      {suspendedUsers.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Removed Users ({deletedUsers.length})</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Suspended Users ({suspendedUsers.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {deletedUsers.map((user) => (
-                <Card key={user.id} className="opacity-60">
+              {suspendedUsers.map((user) => (
+                <Card key={user.id} className="opacity-60" data-testid={`card-suspended-user-${user.id}`}>
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center gap-3 mb-3">
                       <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
@@ -456,10 +456,21 @@ export default function Users() {
                         <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <Badge variant="outline" className="text-xs">
-                        Removed
+                        Suspended
                       </Badge>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs"
+                        data-testid={`button-activate-user-${user.id}`}
+                        onClick={() => toggleUserStatusMutation.mutate({ userId: user.id, isActive: true })}
+                        disabled={toggleUserStatusMutation.isPending}
+                      >
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Activate
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

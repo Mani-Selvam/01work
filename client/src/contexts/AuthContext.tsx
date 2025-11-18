@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        if (message.type === 'USER_DELETED' && message.userId === user.id) {
+        if (message.type === 'USER_SUSPENDED' && message.userId === user.id) {
           localStorage.clear();
           window.location.href = "/";
         }
