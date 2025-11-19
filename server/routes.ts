@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { broadcast } from "./index";
-import { insertCompanySchema, insertUserSchema, insertTaskSchema, insertReportSchema, insertMessageSchema, insertRatingSchema, insertFileUploadSchema, insertGroupMessageSchema, insertGroupMessageReplySchema, insertFeedbackSchema, loginSchema, signupSchema, firebaseSigninSchema, companyRegistrationSchema, companyBasicRegistrationSchema, superAdminLoginSchema, companyAdminLoginSchema, companyUserLoginSchema, insertSlotPricingSchema, insertCompanyPaymentSchema, updatePaymentStatusSchema, slotPurchaseSchema, passwordResetRequestSchema, passwordResetSchema, insertAttendanceRecordSchema, insertCorrectionRequestSchema, insertLeadSchema, updateLeadAdminSchema, updateLeadTeamLeaderSchema } from "@shared/schema";
+import { insertCompanySchema, insertUserSchema, insertTaskSchema, insertReportSchema, insertMessageSchema, insertRatingSchema, insertFileUploadSchema, insertGroupMessageSchema, insertGroupMessageReplySchema, insertFeedbackSchema, loginSchema, signupSchema, firebaseSigninSchema, companyRegistrationSchema, companyBasicRegistrationSchema, superAdminLoginSchema, companyAdminLoginSchema, companyUserLoginSchema, insertSlotPricingSchema, insertCompanyPaymentSchema, updatePaymentStatusSchema, slotPurchaseSchema, passwordResetRequestSchema, passwordResetSchema, insertAttendanceRecordSchema, insertCorrectionRequestSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { sendReportNotification, sendCompanyServerIdEmail, sendUserIdEmail, sendPasswordResetEmail, sendPaymentConfirmationEmail, sendCompanyVerificationEmail } from "./email";
