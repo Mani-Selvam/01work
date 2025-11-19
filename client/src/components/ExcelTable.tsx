@@ -69,7 +69,7 @@ export function ExcelTable<T extends Record<string, any>>({
     const newRow: any = {};
     columns.forEach(col => {
       if (col.key !== "id" && col.key !== "createdAt" && col.key !== "updatedAt") {
-        newRow[col.key] = col.type === "number" ? 0 : "";
+        newRow[col.key] = null;
       }
     });
     onAdd(newRow as Partial<T>);
@@ -93,6 +93,12 @@ export function ExcelTable<T extends Record<string, any>>({
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-muted">
+                <th
+                  className="border-b border-border p-2 text-left text-sm font-medium sticky top-0 bg-muted z-10"
+                  style={{ width: "60px", minWidth: "60px" }}
+                >
+                  S.No
+                </th>
                 {columns.map((column) => (
                   <th
                     key={column.key}
@@ -110,19 +116,24 @@ export function ExcelTable<T extends Record<string, any>>({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={columns.length + 2} className="p-8 text-center text-muted-foreground">
                     Loading...
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={columns.length + 2} className="p-8 text-center text-muted-foreground">
                     {emptyMessage}
                   </td>
                 </tr>
               ) : (
-                data.map((row) => (
+                data.map((row, index) => (
                   <tr key={row.id} className="hover-elevate">
+                    <td className="border-b border-border p-0 bg-muted/50">
+                      <div className="px-3 py-2 min-h-[40px] flex items-center justify-center text-sm font-medium">
+                        {index + 1}
+                      </div>
+                    </td>
                     {columns.map((column) => {
                       const isEditing =
                         editingCell?.rowId === row.id &&
