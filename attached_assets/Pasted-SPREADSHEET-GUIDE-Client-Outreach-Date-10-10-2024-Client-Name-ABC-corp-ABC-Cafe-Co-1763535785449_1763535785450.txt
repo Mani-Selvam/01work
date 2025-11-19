@@ -1,0 +1,69 @@
+SPREADSHEET GUIDE
+ Client Outreach
+➔ Date - 10/10/2024
+➔ Client Name - ABC corp, ABC Cafe..
+➔ Contact Person - John, James etc..
+➔ Project ID - PROJ001
+➔ Contact Method - Email, phone etc..
+➔ Email/phone - abc@gmail.com
+➔ Profile Link - https://instagram/
+➔ Service Offered - Web Dev, Video Editing,
+➔ Initial Outreach - On First interaction with Client
+➔ Follow-up 2 - On Second Interaction with Client
+➔ Follow-up 3 - On Third Interaction with the Client
+➔ Status - Status of the interaction on each meeting
+➔ Outcome - Summary of the status
+➔ Next Follow up Date - The next date to contact the Client
+➔ Priority - Consider the budget, time, expense
+➔ Notes - Comments
+Communication Log
+This is not for initial outreach. Communication Log can be used from Follow up 2
+till the project is completed.
+➔ Date of Contact - Date of Contact after initial outreach
+➔ Client Name - Name of the Company or business
+➔ Project ID - Uniques project ID, as in Outreach tracker
+➔ Channel - Mode of Communication
+➔ Purpose of Contact - Reason for the call
+➔ Summary of Discussion - Summarize main points, changes, others
+➔ Next Action - Next action towards the project
+➔ Follow up Date - Next Follow up date
+➔ Status - In progress, Completed, Not started
+➔ Notes - Comments
+ Proposal Tracker
+This tracker is used when a deal is done and r
+➔ Project ID - Uniques project ID, same as in Outreach tracker
+➔ Date Sent - Date when the contract is send
+➔ Client Name - Company / Business name
+➔ Contact Person - Name of the owner
+➔ Email/ Phone num - Contact number
+➔ Project Name - Name of the project
+➔ Deal Status - Payment status
+➔ Project Start Date - Date of the advance paid
+➔ Project End Date - Project deadline
+➔ Project Status - In progress, completed, Not started
+ Income Tracker
+➔ Date - Current Date
+➔ Client Name - Name of the Client
+➔ Project ID - Uniques project ID, as in Outreach tracker
+➔ Service - Offered Service
+➔ Invoice Date - Date on which the invoice is sent
+➔ Invoice ID - Add invoice ID of Payment invoice
+➔ Total Amount - Total amount of the project
+➔ Advance payment - Advance payment of the project (20 - 50%)
+➔ Remaining Balance - Total Amount - Advance payment
+➔ Adv Payment Date - Date on which advance is paid
+➔ Final Payment Date - Date on which total amount is paid
+➔ Payment Status - Advance, Not started, Completed
+➔ Payment Method - UPI, Bank transfer, etc..
+➔ Expense - Expense for the project
+➔ Net Income - Total amount - Expense
+ Expense Tracker
+➔ Date - Current Date
+➔ Client Name - Name of the company / Business
+➔ Project ID - Uniques project ID, as in Income tracker
+➔ Service - Service offered
+➔ Description - On what the expense is made
+➔ Amount - How much amount spent
+➔ Status - Payment Status
+➔ Payment Method - Payment Method
+➔ Notes - Comments

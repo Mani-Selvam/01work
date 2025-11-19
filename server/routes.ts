@@ -4854,6 +4854,374 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== CRM TRACKERS ROUTES ====================
+  // All CRM tracker routes are only accessible by company_admin role
+  
+  // Client Outreach Routes
+  app.get("/api/crm/client-outreach", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.getClientOutreachByCompany(requestingUser.companyId);
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/crm/client-outreach", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.createClientOutreach({
+        ...req.body,
+        companyId: requestingUser.companyId,
+      });
+      
+      res.status(201).json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.patch("/api/crm/client-outreach/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getClientOutreachById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const updated = await storage.updateClientOutreach(id, req.body);
+      res.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.delete("/api/crm/client-outreach/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getClientOutreachById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.deleteClientOutreach(id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Communication Log Routes
+  app.get("/api/crm/communication-log", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.getCommunicationLogByCompany(requestingUser.companyId);
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/crm/communication-log", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.createCommunicationLog({
+        ...req.body,
+        companyId: requestingUser.companyId,
+      });
+      
+      res.status(201).json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.patch("/api/crm/communication-log/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getCommunicationLogById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const updated = await storage.updateCommunicationLog(id, req.body);
+      res.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.delete("/api/crm/communication-log/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getCommunicationLogById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.deleteCommunicationLog(id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Proposal Tracker Routes
+  app.get("/api/crm/proposal-tracker", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.getProposalTrackerByCompany(requestingUser.companyId);
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/crm/proposal-tracker", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.createProposalTracker({
+        ...req.body,
+        companyId: requestingUser.companyId,
+      });
+      
+      res.status(201).json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.patch("/api/crm/proposal-tracker/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getProposalTrackerById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const updated = await storage.updateProposalTracker(id, req.body);
+      res.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.delete("/api/crm/proposal-tracker/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getProposalTrackerById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.deleteProposalTracker(id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Income Tracker Routes
+  app.get("/api/crm/income-tracker", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.getIncomeTrackerByCompany(requestingUser.companyId);
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/crm/income-tracker", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.createIncomeTracker({
+        ...req.body,
+        companyId: requestingUser.companyId,
+      });
+      
+      res.status(201).json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.patch("/api/crm/income-tracker/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getIncomeTrackerById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const updated = await storage.updateIncomeTracker(id, req.body);
+      res.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.delete("/api/crm/income-tracker/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getIncomeTrackerById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.deleteIncomeTracker(id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Expense Tracker Routes
+  app.get("/api/crm/expense-tracker", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.getExpenseTrackerByCompany(requestingUser.companyId);
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/crm/expense-tracker", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const data = await storage.createExpenseTracker({
+        ...req.body,
+        companyId: requestingUser.companyId,
+      });
+      
+      res.status(201).json(data);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.patch("/api/crm/expense-tracker/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getExpenseTrackerById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const updated = await storage.updateExpenseTracker(id, req.body);
+      res.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.delete("/api/crm/expense-tracker/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      const existing = await storage.getExpenseTrackerById(id);
+      if (!existing || existing.companyId !== requestingUser?.companyId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.deleteExpenseTracker(id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

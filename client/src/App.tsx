@@ -46,6 +46,7 @@ import CompanyManagement from "@/pages/admin/CompanyManagement";
 import CompanyProfile from "@/pages/admin/CompanyProfile";
 import PaymentHistory from "@/pages/admin/PaymentHistory";
 import LeadManagement from "@/pages/admin/LeadManagement";
+import CRMPage from "@/pages/crm";
 import SuperAdminDashboard from "@/pages/super-admin/SuperAdminDashboard";
 import PaymentTracking from "@/pages/super-admin/PaymentTracking";
 import ActivityLogs from "@/pages/super-admin/ActivityLogs";
@@ -248,6 +249,9 @@ function Router() {
       </Route>
       <Route path="/admin/leads">
         {() => <ProtectedRoute component={() => <AdminLayout><LeadManagement /></AdminLayout>} allowedRole="admin" />}
+      </Route>
+      <Route path="/admin/crm">
+        {() => <ProtectedRoute component={() => <AdminLayout><CRMPage /></AdminLayout>} allowedRole="admin" />}
       </Route>
       <Route path="/admin">
         <Redirect to="/admin/dashboard" />

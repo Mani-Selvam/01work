@@ -2,6 +2,7 @@
 import { 
   companies, users, tasks, reports, messages, ratings, fileUploads, archiveReports, groupMessages, groupMessageReplies, taskTimeLogs, feedbacks, slotPricing, companyPayments, passwordResetTokens, adminActivityLogs, badges, autoTasks, leaves, holidays, tasksReports,
   shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments, leads, leadStageData, leadDocuments, leadHistory,
+  clientOutreach, communicationLog, proposalTracker, incomeTracker, expenseTracker,
   type Company, type InsertCompany,
   type User, type InsertUser,
   type Task, type InsertTask,
@@ -35,6 +36,11 @@ import {
   type LeadStageData, type InsertLeadStageData,
   type LeadDocument, type InsertLeadDocument,
   type LeadHistory, type InsertLeadHistory,
+  type ClientOutreach, type InsertClientOutreach,
+  type CommunicationLog, type InsertCommunicationLog,
+  type ProposalTracker, type InsertProposalTracker,
+  type IncomeTracker, type InsertIncomeTracker,
+  type ExpenseTracker, type InsertExpenseTracker,
 } from "@shared/schema";
 import { eq, and, or, desc, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -314,6 +320,41 @@ export interface IStorage {
   // Lead History operations
   createLeadHistory(history: InsertLeadHistory): Promise<LeadHistory>;
   getLeadHistory(leadId: number): Promise<LeadHistory[]>;
+  
+  // CRM Tracker operations - Client Outreach
+  createClientOutreach(data: InsertClientOutreach): Promise<ClientOutreach>;
+  getClientOutreachByCompany(companyId: number): Promise<ClientOutreach[]>;
+  getClientOutreachById(id: number): Promise<ClientOutreach | null>;
+  updateClientOutreach(id: number, updates: Partial<InsertClientOutreach>): Promise<ClientOutreach>;
+  deleteClientOutreach(id: number): Promise<void>;
+  
+  // CRM Tracker operations - Communication Log
+  createCommunicationLog(data: InsertCommunicationLog): Promise<CommunicationLog>;
+  getCommunicationLogByCompany(companyId: number): Promise<CommunicationLog[]>;
+  getCommunicationLogById(id: number): Promise<CommunicationLog | null>;
+  updateCommunicationLog(id: number, updates: Partial<InsertCommunicationLog>): Promise<CommunicationLog>;
+  deleteCommunicationLog(id: number): Promise<void>;
+  
+  // CRM Tracker operations - Proposal Tracker
+  createProposalTracker(data: InsertProposalTracker): Promise<ProposalTracker>;
+  getProposalTrackerByCompany(companyId: number): Promise<ProposalTracker[]>;
+  getProposalTrackerById(id: number): Promise<ProposalTracker | null>;
+  updateProposalTracker(id: number, updates: Partial<InsertProposalTracker>): Promise<ProposalTracker>;
+  deleteProposalTracker(id: number): Promise<void>;
+  
+  // CRM Tracker operations - Income Tracker
+  createIncomeTracker(data: InsertIncomeTracker): Promise<IncomeTracker>;
+  getIncomeTrackerByCompany(companyId: number): Promise<IncomeTracker[]>;
+  getIncomeTrackerById(id: number): Promise<IncomeTracker | null>;
+  updateIncomeTracker(id: number, updates: Partial<InsertIncomeTracker>): Promise<IncomeTracker>;
+  deleteIncomeTracker(id: number): Promise<void>;
+  
+  // CRM Tracker operations - Expense Tracker
+  createExpenseTracker(data: InsertExpenseTracker): Promise<ExpenseTracker>;
+  getExpenseTrackerByCompany(companyId: number): Promise<ExpenseTracker[]>;
+  getExpenseTrackerById(id: number): Promise<ExpenseTracker | null>;
+  updateExpenseTracker(id: number, updates: Partial<InsertExpenseTracker>): Promise<ExpenseTracker>;
+  deleteExpenseTracker(id: number): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -1872,6 +1913,151 @@ export class DbStorage implements IStorage {
     return await db.select().from(leadHistory)
       .where(eq(leadHistory.leadId, leadId))
       .orderBy(desc(leadHistory.createdAt));
+  }
+  
+  // CRM Trackers - Client Outreach
+  async createClientOutreach(data: InsertClientOutreach): Promise<ClientOutreach> {
+    const [result] = await db.insert(clientOutreach).values(data).returning();
+    return result;
+  }
+  
+  async getClientOutreachByCompany(companyId: number): Promise<ClientOutreach[]> {
+    return await db.select().from(clientOutreach)
+      .where(eq(clientOutreach.companyId, companyId))
+      .orderBy(desc(clientOutreach.createdAt));
+  }
+  
+  async getClientOutreachById(id: number): Promise<ClientOutreach | null> {
+    const result = await db.select().from(clientOutreach).where(eq(clientOutreach.id, id)).limit(1);
+    return result[0] || null;
+  }
+  
+  async updateClientOutreach(id: number, updates: Partial<InsertClientOutreach>): Promise<ClientOutreach> {
+    const result = await db.update(clientOutreach)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(clientOutreach.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteClientOutreach(id: number): Promise<void> {
+    await db.delete(clientOutreach).where(eq(clientOutreach.id, id));
+  }
+  
+  // CRM Trackers - Communication Log
+  async createCommunicationLog(data: InsertCommunicationLog): Promise<CommunicationLog> {
+    const result = await db.insert(communicationLog).values(data).returning();
+    return result[0];
+  }
+  
+  async getCommunicationLogByCompany(companyId: number): Promise<CommunicationLog[]> {
+    return await db.select().from(communicationLog)
+      .where(eq(communicationLog.companyId, companyId))
+      .orderBy(desc(communicationLog.createdAt));
+  }
+  
+  async getCommunicationLogById(id: number): Promise<CommunicationLog | null> {
+    const result = await db.select().from(communicationLog).where(eq(communicationLog.id, id)).limit(1);
+    return result[0] || null;
+  }
+  
+  async updateCommunicationLog(id: number, updates: Partial<InsertCommunicationLog>): Promise<CommunicationLog> {
+    const result = await db.update(communicationLog)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(communicationLog.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteCommunicationLog(id: number): Promise<void> {
+    await db.delete(communicationLog).where(eq(communicationLog.id, id));
+  }
+  
+  // CRM Trackers - Proposal Tracker
+  async createProposalTracker(data: InsertProposalTracker): Promise<ProposalTracker> {
+    const result = await db.insert(proposalTracker).values(data).returning();
+    return result[0];
+  }
+  
+  async getProposalTrackerByCompany(companyId: number): Promise<ProposalTracker[]> {
+    return await db.select().from(proposalTracker)
+      .where(eq(proposalTracker.companyId, companyId))
+      .orderBy(desc(proposalTracker.createdAt));
+  }
+  
+  async getProposalTrackerById(id: number): Promise<ProposalTracker | null> {
+    const result = await db.select().from(proposalTracker).where(eq(proposalTracker.id, id)).limit(1);
+    return result[0] || null;
+  }
+  
+  async updateProposalTracker(id: number, updates: Partial<InsertProposalTracker>): Promise<ProposalTracker> {
+    const result = await db.update(proposalTracker)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(proposalTracker.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteProposalTracker(id: number): Promise<void> {
+    await db.delete(proposalTracker).where(eq(proposalTracker.id, id));
+  }
+  
+  // CRM Trackers - Income Tracker
+  async createIncomeTracker(data: InsertIncomeTracker): Promise<IncomeTracker> {
+    const result = await db.insert(incomeTracker).values(data).returning();
+    return result[0];
+  }
+  
+  async getIncomeTrackerByCompany(companyId: number): Promise<IncomeTracker[]> {
+    return await db.select().from(incomeTracker)
+      .where(eq(incomeTracker.companyId, companyId))
+      .orderBy(desc(incomeTracker.createdAt));
+  }
+  
+  async getIncomeTrackerById(id: number): Promise<IncomeTracker | null> {
+    const result = await db.select().from(incomeTracker).where(eq(incomeTracker.id, id)).limit(1);
+    return result[0] || null;
+  }
+  
+  async updateIncomeTracker(id: number, updates: Partial<InsertIncomeTracker>): Promise<IncomeTracker> {
+    const result = await db.update(incomeTracker)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(incomeTracker.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteIncomeTracker(id: number): Promise<void> {
+    await db.delete(incomeTracker).where(eq(incomeTracker.id, id));
+  }
+  
+  // CRM Trackers - Expense Tracker
+  async createExpenseTracker(data: InsertExpenseTracker): Promise<ExpenseTracker> {
+    const result = await db.insert(expenseTracker).values(data).returning();
+    return result[0];
+  }
+  
+  async getExpenseTrackerByCompany(companyId: number): Promise<ExpenseTracker[]> {
+    return await db.select().from(expenseTracker)
+      .where(eq(expenseTracker.companyId, companyId))
+      .orderBy(desc(expenseTracker.createdAt));
+  }
+  
+  async getExpenseTrackerById(id: number): Promise<ExpenseTracker | null> {
+    const result = await db.select().from(expenseTracker).where(eq(expenseTracker.id, id)).limit(1);
+    return result[0] || null;
+  }
+  
+  async updateExpenseTracker(id: number, updates: Partial<InsertExpenseTracker>): Promise<ExpenseTracker> {
+    const result = await db.update(expenseTracker)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(expenseTracker.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteExpenseTracker(id: number): Promise<void> {
+    await db.delete(expenseTracker).where(eq(expenseTracker.id, id));
   }
 }
 

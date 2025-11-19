@@ -423,6 +423,103 @@ export const leadHistory = pgTable("lead_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ==================== CRM TRACKERS ====================
+
+export const clientOutreach = pgTable("client_outreach", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  date: varchar("date", { length: 10 }).notNull(),
+  clientName: varchar("client_name", { length: 255 }).notNull(),
+  contactPerson: varchar("contact_person", { length: 255 }),
+  projectId: varchar("project_id", { length: 50 }).notNull(),
+  contactMethod: varchar("contact_method", { length: 50 }),
+  emailPhone: varchar("email_phone", { length: 255 }),
+  profileLink: text("profile_link"),
+  serviceOffered: varchar("service_offered", { length: 255 }),
+  initialOutreach: text("initial_outreach"),
+  followUp2: text("follow_up_2"),
+  followUp3: text("follow_up_3"),
+  status: varchar("status", { length: 100 }),
+  outcome: text("outcome"),
+  nextFollowUpDate: varchar("next_follow_up_date", { length: 10 }),
+  priority: varchar("priority", { length: 50 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const communicationLog = pgTable("communication_log", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  dateOfContact: varchar("date_of_contact", { length: 10 }).notNull(),
+  clientName: varchar("client_name", { length: 255 }).notNull(),
+  projectId: varchar("project_id", { length: 50 }).notNull(),
+  channel: varchar("channel", { length: 100 }),
+  purposeOfContact: text("purpose_of_contact"),
+  summaryOfDiscussion: text("summary_of_discussion"),
+  nextAction: text("next_action"),
+  followUpDate: varchar("follow_up_date", { length: 10 }),
+  status: varchar("status", { length: 100 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const proposalTracker = pgTable("proposal_tracker", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  projectId: varchar("project_id", { length: 50 }).notNull(),
+  dateSent: varchar("date_sent", { length: 10 }),
+  clientName: varchar("client_name", { length: 255 }).notNull(),
+  contactPerson: varchar("contact_person", { length: 255 }),
+  emailPhone: varchar("email_phone", { length: 255 }),
+  projectName: varchar("project_name", { length: 255 }),
+  dealStatus: varchar("deal_status", { length: 100 }),
+  projectStartDate: varchar("project_start_date", { length: 10 }),
+  projectEndDate: varchar("project_end_date", { length: 10 }),
+  projectStatus: varchar("project_status", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const incomeTracker = pgTable("income_tracker", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  date: varchar("date", { length: 10 }).notNull(),
+  clientName: varchar("client_name", { length: 255 }).notNull(),
+  projectId: varchar("project_id", { length: 50 }).notNull(),
+  service: varchar("service", { length: 255 }),
+  invoiceDate: varchar("invoice_date", { length: 10 }),
+  invoiceId: varchar("invoice_id", { length: 100 }),
+  totalAmount: integer("total_amount"),
+  advancePayment: integer("advance_payment"),
+  remainingBalance: integer("remaining_balance"),
+  advPaymentDate: varchar("adv_payment_date", { length: 10 }),
+  finalPaymentDate: varchar("final_payment_date", { length: 10 }),
+  paymentStatus: varchar("payment_status", { length: 100 }),
+  paymentMethod: varchar("payment_method", { length: 100 }),
+  expense: integer("expense"),
+  netIncome: integer("net_income"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const expenseTracker = pgTable("expense_tracker", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  date: varchar("date", { length: 10 }).notNull(),
+  clientName: varchar("client_name", { length: 255 }),
+  projectId: varchar("project_id", { length: 50 }),
+  service: varchar("service", { length: 255 }),
+  description: text("description"),
+  amount: integer("amount"),
+  status: varchar("status", { length: 100 }),
+  paymentMethod: varchar("payment_method", { length: 100 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
   serverId: true,
@@ -836,3 +933,55 @@ export type LeadDocument = typeof leadDocuments.$inferSelect;
 
 export type InsertLeadHistory = z.infer<typeof insertLeadHistorySchema>;
 export type LeadHistory = typeof leadHistory.$inferSelect;
+
+// ==================== CRM TRACKERS SCHEMAS ====================
+
+export const insertClientOutreachSchema = createInsertSchema(clientOutreach).omit({
+  id: true,
+  companyId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertClientOutreach = z.infer<typeof insertClientOutreachSchema>;
+export type ClientOutreach = typeof clientOutreach.$inferSelect;
+
+export const insertCommunicationLogSchema = createInsertSchema(communicationLog).omit({
+  id: true,
+  companyId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCommunicationLog = z.infer<typeof insertCommunicationLogSchema>;
+export type CommunicationLog = typeof communicationLog.$inferSelect;
+
+export const insertProposalTrackerSchema = createInsertSchema(proposalTracker).omit({
+  id: true,
+  companyId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertProposalTracker = z.infer<typeof insertProposalTrackerSchema>;
+export type ProposalTracker = typeof proposalTracker.$inferSelect;
+
+export const insertIncomeTrackerSchema = createInsertSchema(incomeTracker).omit({
+  id: true,
+  companyId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertIncomeTracker = z.infer<typeof insertIncomeTrackerSchema>;
+export type IncomeTracker = typeof incomeTracker.$inferSelect;
+
+export const insertExpenseTrackerSchema = createInsertSchema(expenseTracker).omit({
+  id: true,
+  companyId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertExpenseTracker = z.infer<typeof insertExpenseTrackerSchema>;
+export type ExpenseTracker = typeof expenseTracker.$inferSelect;
