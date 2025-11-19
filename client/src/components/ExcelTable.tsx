@@ -45,7 +45,8 @@ export function ExcelTable<T extends Record<string, any>>({
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
 
-  const handleCellClick = (rowId: number, field: string, currentValue: any) => {
+  const handleCellClick = (e: React.MouseEvent, rowId: number, field: string, currentValue: any) => {
+    e.stopPropagation();
     const column = columns.find(col => col.key === field);
     if (column?.editable === false) return;
     
@@ -143,7 +144,12 @@ export function ExcelTable<T extends Record<string, any>>({
                 </tr>
               ) : (
                 data.map((row, index) => (
-                  <tr key={row.id} className="hover-elevate">
+                  <tr 
+                    key={row.id} 
+                    className="hover-elevate cursor-pointer"
+                    onClick={() => handleViewRow(row)}
+                    data-testid={`row-${row.id}`}
+                  >
                     <td className="border-b border-border p-0 bg-muted/50">
                       <div className="px-3 py-2 min-h-[40px] flex items-center justify-center text-sm font-medium">
                         {index + 1}
@@ -162,7 +168,7 @@ export function ExcelTable<T extends Record<string, any>>({
                             "border-b border-border p-0 cursor-pointer",
                             column.editable === false && "bg-muted/50 cursor-default"
                           )}
-                          onClick={() => handleCellClick(row.id, column.key, cellValue)}
+                          onClick={(e) => handleCellClick(e, row.id, column.key, cellValue)}
                           data-testid={`cell-${column.key}-${row.id}`}
                         >
                           {isEditing ? (
