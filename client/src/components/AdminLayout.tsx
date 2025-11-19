@@ -23,7 +23,6 @@ import {
   TrendingUp,
   Settings,
   FileEdit,
-  Target,
   Database
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
@@ -43,7 +42,6 @@ const navItems: NavItem[] = [
   { path: "/admin/company", label: "Company Settings", icon: BarChart3 },
   { path: "/admin/payment-history", label: "Payment History", icon: Receipt },
   { path: "/admin/users", label: "Users", icon: Users },
-  { path: "/admin/leads", label: "Lead Management", icon: Target },
   { path: "/admin/crm", label: "CRM Trackers", icon: Database },
   { path: "/admin/reports", label: "Reports", icon: FileText },
   { path: "/admin/tasks", label: "Tasks", icon: CheckSquare },

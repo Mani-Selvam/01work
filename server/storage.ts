@@ -1,7 +1,7 @@
 ﻿import { db } from "./db";
 import { 
   companies, users, tasks, reports, messages, ratings, fileUploads, archiveReports, groupMessages, groupMessageReplies, taskTimeLogs, feedbacks, slotPricing, companyPayments, passwordResetTokens, adminActivityLogs, badges, autoTasks, leaves, holidays, tasksReports,
-  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments, leads, leadStageData, leadDocuments, leadHistory,
+  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments,
   clientOutreach, communicationLog, proposalTracker, incomeTracker, expenseTracker,
   type Company, type InsertCompany,
   type User, type InsertUser,
@@ -32,10 +32,6 @@ import {
   type Reward, type InsertReward,
   type AttendanceLog, type InsertAttendanceLog,
   type TeamAssignment, type InsertTeamAssignment,
-  type Lead, type InsertLead,
-  type LeadStageData, type InsertLeadStageData,
-  type LeadDocument, type InsertLeadDocument,
-  type LeadHistory, type InsertLeadHistory,
   type ClientOutreach, type InsertClientOutreach,
   type CommunicationLog, type InsertCommunicationLog,
   type ProposalTracker, type InsertProposalTracker,
@@ -300,26 +296,6 @@ export interface IStorage {
   getTeamLeaderByMember(memberId: number): Promise<User | null>;
   getAllTeamAssignments(companyId: number): Promise<TeamAssignment[]>;
   getTeamAssignmentsByMemberId(memberId: number): Promise<TeamAssignment[]>;
-  
-  // Lead operations
-  createLead(lead: InsertLead): Promise<Lead>;
-  getLeadById(id: number): Promise<Lead | null>;
-  getLeadsByCompanyId(companyId: number): Promise<Lead[]>;
-  getLeadsByAssignedTo(assignedTo: number): Promise<Lead[]>;
-  updateLead(id: number, updates: Partial<InsertLead>): Promise<Lead>;
-  deleteLead(id: number): Promise<void>;
-  
-  // Lead Stage Data operations
-  createLeadStageData(data: InsertLeadStageData): Promise<LeadStageData>;
-  getLeadStageData(leadId: number): Promise<LeadStageData[]>;
-  
-  // Lead Documents operations
-  createLeadDocument(document: InsertLeadDocument): Promise<LeadDocument>;
-  getLeadDocuments(leadId: number): Promise<LeadDocument[]>;
-  
-  // Lead History operations
-  createLeadHistory(history: InsertLeadHistory): Promise<LeadHistory>;
-  getLeadHistory(leadId: number): Promise<LeadHistory[]>;
   
   // CRM Tracker operations - Client Outreach
   createClientOutreach(data: InsertClientOutreach): Promise<ClientOutreach>;
@@ -1839,80 +1815,6 @@ export class DbStorage implements IStorage {
         sql`${teamAssignments.removedAt} IS NULL`
       ))
       .orderBy(desc(teamAssignments.assignedAt));
-  }
-  
-  // Lead Management
-  async createLead(lead: InsertLead): Promise<Lead> {
-    const result = await db.insert(leads).values(lead).returning();
-    return result[0];
-  }
-  
-  async getLeadById(id: number): Promise<Lead | null> {
-    const result = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
-    return result[0] || null;
-  }
-  
-  async getLeadsByCompanyId(companyId: number): Promise<Lead[]> {
-    return await db.select().from(leads)
-      .where(eq(leads.companyId, companyId))
-      .orderBy(desc(leads.createdAt));
-  }
-  
-  async getLeadsByAssignedTo(assignedTo: number): Promise<Lead[]> {
-    return await db.select().from(leads)
-      .where(eq(leads.assignedTo, assignedTo))
-      .orderBy(desc(leads.createdAt));
-  }
-  
-  async updateLead(id: number, updates: Partial<InsertLead>): Promise<Lead> {
-    const result = await db.update(leads)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(leads.id, id))
-      .returning();
-    return result[0];
-  }
-  
-  async deleteLead(id: number): Promise<void> {
-    await db.delete(leads).where(eq(leads.id, id));
-  }
-  
-  // Lead Stage Data operations
-  async createLeadStageData(data: InsertLeadStageData): Promise<LeadStageData> {
-    const result = await db.insert(leadStageData).values({
-      ...data,
-      completedAt: new Date(),
-    }).returning();
-    return result[0];
-  }
-  
-  async getLeadStageData(leadId: number): Promise<LeadStageData[]> {
-    return await db.select().from(leadStageData)
-      .where(eq(leadStageData.leadId, leadId))
-      .orderBy(desc(leadStageData.stage));
-  }
-  
-  // Lead Documents operations
-  async createLeadDocument(document: InsertLeadDocument): Promise<LeadDocument> {
-    const result = await db.insert(leadDocuments).values(document).returning();
-    return result[0];
-  }
-  
-  async getLeadDocuments(leadId: number): Promise<LeadDocument[]> {
-    return await db.select().from(leadDocuments)
-      .where(eq(leadDocuments.leadId, leadId))
-      .orderBy(desc(leadDocuments.createdAt));
-  }
-  
-  // Lead History operations
-  async createLeadHistory(history: InsertLeadHistory): Promise<LeadHistory> {
-    const result = await db.insert(leadHistory).values(history).returning();
-    return result[0];
-  }
-  
-  async getLeadHistory(leadId: number): Promise<LeadHistory[]> {
-    return await db.select().from(leadHistory)
-      .where(eq(leadHistory.leadId, leadId))
-      .orderBy(desc(leadHistory.createdAt));
   }
   
   // CRM Trackers - Client Outreach
