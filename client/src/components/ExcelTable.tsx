@@ -2,8 +2,16 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Column {
   key: string;
@@ -34,6 +42,8 @@ export function ExcelTable<T extends Record<string, any>>({
 }: ExcelTableProps<T>) {
   const [editingCell, setEditingCell] = useState<{ rowId: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<T | null>(null);
 
   const handleCellClick = (rowId: number, field: string, currentValue: any) => {
     const column = columns.find(col => col.key === field);
@@ -73,6 +83,11 @@ export function ExcelTable<T extends Record<string, any>>({
       }
     });
     onAdd(newRow as Partial<T>);
+  };
+
+  const handleViewRow = (row: T) => {
+    setSelectedRow(row);
+    setViewDialogOpen(true);
   };
 
   return (
@@ -173,15 +188,31 @@ export function ExcelTable<T extends Record<string, any>>({
                         </td>
                       );
                     })}
-                    <td className="border-b border-border p-2 text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(row.id)}
-                        data-testid={`button-delete-${row.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                    <td className="border-b border-border p-2">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewRow(row);
+                          }}
+                          data-testid={`button-view-${row.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(row.id);
+                          }}
+                          data-testid={`button-delete-${row.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -190,6 +221,35 @@ export function ExcelTable<T extends Record<string, any>>({
           </table>
         </div>
       </Card>
+
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>View Details</DialogTitle>
+            <DialogDescription>
+              Complete information for this entry
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            {selectedRow && (
+              <div className="space-y-4 pr-4">
+                {columns.map((column) => (
+                  <div key={column.key} className="grid grid-cols-3 gap-4 py-2 border-b">
+                    <div className="font-medium text-sm text-muted-foreground">
+                      {column.label}
+                    </div>
+                    <div className="col-span-2 text-sm" data-testid={`view-${column.key}`}>
+                      {selectedRow[column.key] || (
+                        <span className="text-muted-foreground italic">Not set</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
