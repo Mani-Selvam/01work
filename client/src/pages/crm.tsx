@@ -24,10 +24,7 @@ export default function CRMPage() {
 
   const createOutreach = useMutation({
     mutationFn: async (data: Partial<ClientOutreach>) =>
-      apiRequest("/api/crm/client-outreach", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("/api/crm/client-outreach", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/client-outreach"] });
       toast({ title: "Row added successfully" });
@@ -37,10 +34,7 @@ export default function CRMPage() {
   const updateOutreach = useMutation({
     mutationFn: async ({ id, field, value }: { id: number; field: string; value: any }) => {
       const updates = { [field]: value };
-      return apiRequest(`/api/crm/client-outreach/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-      });
+      return apiRequest(`/api/crm/client-outreach/${id}`, "PATCH", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/client-outreach"] });
@@ -49,7 +43,7 @@ export default function CRMPage() {
 
   const deleteOutreach = useMutation({
     mutationFn: async (id: number) =>
-      apiRequest(`/api/crm/client-outreach/${id}`, { method: "DELETE" }),
+      apiRequest(`/api/crm/client-outreach/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/client-outreach"] });
       toast({ title: "Row deleted successfully" });
@@ -63,10 +57,7 @@ export default function CRMPage() {
 
   const createComm = useMutation({
     mutationFn: async (data: Partial<CommunicationLog>) =>
-      apiRequest("/api/crm/communication-log", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("/api/crm/communication-log", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/communication-log"] });
       toast({ title: "Row added successfully" });
@@ -76,10 +67,7 @@ export default function CRMPage() {
   const updateComm = useMutation({
     mutationFn: async ({ id, field, value }: { id: number; field: string; value: any }) => {
       const updates = { [field]: value };
-      return apiRequest(`/api/crm/communication-log/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-      });
+      return apiRequest(`/api/crm/communication-log/${id}`, "PATCH", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/communication-log"] });
@@ -88,7 +76,7 @@ export default function CRMPage() {
 
   const deleteComm = useMutation({
     mutationFn: async (id: number) =>
-      apiRequest(`/api/crm/communication-log/${id}`, { method: "DELETE" }),
+      apiRequest(`/api/crm/communication-log/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/communication-log"] });
       toast({ title: "Row deleted successfully" });
@@ -102,10 +90,7 @@ export default function CRMPage() {
 
   const createProposal = useMutation({
     mutationFn: async (data: Partial<ProposalTracker>) =>
-      apiRequest("/api/crm/proposal-tracker", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("/api/crm/proposal-tracker", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/proposal-tracker"] });
       toast({ title: "Row added successfully" });
@@ -115,10 +100,7 @@ export default function CRMPage() {
   const updateProposal = useMutation({
     mutationFn: async ({ id, field, value }: { id: number; field: string; value: any }) => {
       const updates = { [field]: value };
-      return apiRequest(`/api/crm/proposal-tracker/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-      });
+      return apiRequest(`/api/crm/proposal-tracker/${id}`, "PATCH", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/proposal-tracker"] });
@@ -127,7 +109,7 @@ export default function CRMPage() {
 
   const deleteProposal = useMutation({
     mutationFn: async (id: number) =>
-      apiRequest(`/api/crm/proposal-tracker/${id}`, { method: "DELETE" }),
+      apiRequest(`/api/crm/proposal-tracker/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/proposal-tracker"] });
       toast({ title: "Row deleted successfully" });
@@ -141,10 +123,7 @@ export default function CRMPage() {
 
   const createIncome = useMutation({
     mutationFn: async (data: Partial<IncomeTracker>) =>
-      apiRequest("/api/crm/income-tracker", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("/api/crm/income-tracker", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/income-tracker"] });
       toast({ title: "Row added successfully" });
@@ -154,10 +133,7 @@ export default function CRMPage() {
   const updateIncome = useMutation({
     mutationFn: async ({ id, field, value }: { id: number; field: string; value: any }) => {
       const updates = { [field]: value };
-      return apiRequest(`/api/crm/income-tracker/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-      });
+      return apiRequest(`/api/crm/income-tracker/${id}`, "PATCH", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/income-tracker"] });
@@ -166,7 +142,7 @@ export default function CRMPage() {
 
   const deleteIncome = useMutation({
     mutationFn: async (id: number) =>
-      apiRequest(`/api/crm/income-tracker/${id}`, { method: "DELETE" }),
+      apiRequest(`/api/crm/income-tracker/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/income-tracker"] });
       toast({ title: "Row deleted successfully" });
@@ -180,10 +156,7 @@ export default function CRMPage() {
 
   const createExpense = useMutation({
     mutationFn: async (data: Partial<ExpenseTracker>) =>
-      apiRequest("/api/crm/expense-tracker", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("/api/crm/expense-tracker", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/expense-tracker"] });
       toast({ title: "Row added successfully" });
@@ -193,10 +166,7 @@ export default function CRMPage() {
   const updateExpense = useMutation({
     mutationFn: async ({ id, field, value }: { id: number; field: string; value: any }) => {
       const updates = { [field]: value };
-      return apiRequest(`/api/crm/expense-tracker/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-      });
+      return apiRequest(`/api/crm/expense-tracker/${id}`, "PATCH", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/expense-tracker"] });
@@ -205,7 +175,7 @@ export default function CRMPage() {
 
   const deleteExpense = useMutation({
     mutationFn: async (id: number) =>
-      apiRequest(`/api/crm/expense-tracker/${id}`, { method: "DELETE" }),
+      apiRequest(`/api/crm/expense-tracker/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/expense-tracker"] });
       toast({ title: "Row deleted successfully" });
