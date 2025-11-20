@@ -88,6 +88,7 @@ export default function CRM() {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/enquiries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
       toast({ title: "Enquiry created successfully" });
+      setSelectedEnquiry(null);
       setCurrentSection(1);
     },
   });
