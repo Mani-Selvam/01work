@@ -345,7 +345,7 @@ export default function CRM() {
 
               <div className="space-y-2">
                 <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select name="paymentMethod" defaultValue={selectedEnquiry?.paymentMethod || ""}>
+                <Select key={`payment-${selectedEnquiry?.id || 'new'}`} name="paymentMethod" defaultValue={selectedEnquiry?.paymentMethod || ""}>
                   <SelectTrigger data-testid="select-payment-method">
                     <SelectValue placeholder="Select payment method" />
                   </SelectTrigger>
@@ -373,7 +373,7 @@ export default function CRM() {
 
               <div className="space-y-2">
                 <Label htmlFor="leadSource">Lead Source</Label>
-                <Select name="leadSource" defaultValue={selectedEnquiry?.leadSource || ""}>
+                <Select key={`source-${selectedEnquiry?.id || 'new'}`} name="leadSource" defaultValue={selectedEnquiry?.leadSource || ""}>
                   <SelectTrigger data-testid="select-lead-source">
                     <SelectValue placeholder="Select lead source" />
                   </SelectTrigger>
@@ -389,7 +389,7 @@ export default function CRM() {
 
               <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
-                <Select name="status" defaultValue={selectedEnquiry?.status || "new"}>
+                <Select key={`status-${selectedEnquiry?.id || 'new'}`} name="status" defaultValue={selectedEnquiry?.status || "new"}>
                   <SelectTrigger data-testid="select-status">
                     <SelectValue />
                   </SelectTrigger>
@@ -490,7 +490,7 @@ export default function CRM() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="enquiryId">Select Enquiry *</Label>
-                <Select name="enquiryId" required>
+                <Select key={`enquiry-${followupFormKey}`} name="enquiryId" required>
                   <SelectTrigger data-testid="select-enquiry-id">
                     <SelectValue placeholder="Select an enquiry" />
                   </SelectTrigger>
@@ -518,7 +518,7 @@ export default function CRM() {
 
               <div className="space-y-2">
                 <Label htmlFor="enquiryStatus">Enquiry Status *</Label>
-                <Select name="enquiryStatus" required>
+                <Select key={`enquiry-status-${followupFormKey}`} name="enquiryStatus" required>
                   <SelectTrigger data-testid="select-enquiry-status">
                     <SelectValue />
                   </SelectTrigger>
