@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, TrendingUp, TrendingDown, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, TrendingUp, TrendingDown, Calendar, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import type { Enquiry, Followup } from "@shared/schema";
 
@@ -64,6 +64,7 @@ interface CRMStats {
 export default function CRM() {
   const [currentSection, setCurrentSection] = useState(0);
   const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
+  const [selectedEnquiryForFollowup, setSelectedEnquiryForFollowup] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [enquiryFormKey, setEnquiryFormKey] = useState(0);
   const [followupFormKey, setFollowupFormKey] = useState(0);
@@ -128,6 +129,7 @@ export default function CRM() {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/enquiries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
       toast({ title: "Followup created successfully" });
+      setSelectedEnquiryForFollowup(null);
       setFollowupFormKey(prev => prev + 1);
       setCurrentSection(3);
     },
@@ -265,6 +267,18 @@ export default function CRM() {
                           data-testid={`button-edit-enquiry-${enq.id}`}
                         >
                           <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedEnquiryForFollowup(enq.id);
+                            setFollowupFormKey(prev => prev + 1);
+                            setCurrentSection(4);
+                          }}
+                          data-testid={`button-add-followup-${enq.id}`}
+                        >
+                          <UserPlus className="h-3 w-3" />
                         </Button>
                         <Button
                           size="sm"
@@ -444,6 +458,7 @@ export default function CRM() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-2xl font-bold" data-testid="text-followup-list-title">Followup List</h2>
         <Button onClick={() => {
+          setSelectedEnquiryForFollowup(null);
           setFollowupFormKey(prev => prev + 1);
           setCurrentSection(4);
         }} data-testid="button-add-followup">
@@ -494,7 +509,12 @@ export default function CRM() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="enquiryId">Select Enquiry *</Label>
-                <Select key={`enquiry-${followupFormKey}`} name="enquiryId" required>
+                <Select 
+                  key={`enquiry-${followupFormKey}`} 
+                  name="enquiryId" 
+                  required 
+                  defaultValue={selectedEnquiryForFollowup ? String(selectedEnquiryForFollowup) : undefined}
+                >
                   <SelectTrigger data-testid="select-enquiry-id">
                     <SelectValue placeholder="Select an enquiry" />
                   </SelectTrigger>
