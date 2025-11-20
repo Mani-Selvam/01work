@@ -361,6 +361,38 @@ export const teamAssignments = pgTable("team_assignments", {
   uniqueAssignment: sql`UNIQUE (team_leader_id, member_id, company_id, COALESCE(removed_at, '1970-01-01'))`,
 }));
 
+export const enquiries = pgTable("enquiries", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  address: text("address"),
+  mobileNo: varchar("mobile_no", { length: 20 }).notNull(),
+  productName: varchar("product_name", { length: 255 }),
+  productVariant: varchar("product_variant", { length: 255 }),
+  color: varchar("color", { length: 100 }),
+  paymentMethod: varchar("payment_method", { length: 50 }),
+  enquiryDate: varchar("enquiry_date", { length: 10 }).notNull(),
+  leadSource: varchar("lead_source", { length: 100 }),
+  status: varchar("status", { length: 50 }).notNull().default("new"),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const followups = pgTable("followups", {
+  id: serial("id").primaryKey(),
+  enquiryId: integer("enquiry_id").references(() => enquiries.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  followupDate: varchar("followup_date", { length: 10 }).notNull(),
+  remark: text("remark").notNull(),
+  enquiryStatus: varchar("enquiry_status", { length: 50 }).notNull(),
+  nextFollowupDate: varchar("next_followup_date", { length: 10 }),
+  payment: varchar("payment", { length: 100 }),
+  expectedDeliveryDate: varchar("expected_delivery_date", { length: 10 }),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
   serverId: true,
@@ -717,3 +749,20 @@ export const insertTeamAssignmentSchema = createInsertSchema(teamAssignments).om
 
 export type InsertTeamAssignment = z.infer<typeof insertTeamAssignmentSchema>;
 export type TeamAssignment = typeof teamAssignments.$inferSelect;
+
+export const insertEnquirySchema = createInsertSchema(enquiries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEnquiry = z.infer<typeof insertEnquirySchema>;
+export type Enquiry = typeof enquiries.$inferSelect;
+
+export const insertFollowupSchema = createInsertSchema(followups).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFollowup = z.infer<typeof insertFollowupSchema>;
+export type Followup = typeof followups.$inferSelect;
