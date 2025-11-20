@@ -1,7 +1,7 @@
 ﻿import { db } from "./db";
 import { 
   companies, users, tasks, reports, messages, ratings, fileUploads, archiveReports, groupMessages, groupMessageReplies, taskTimeLogs, feedbacks, slotPricing, companyPayments, passwordResetTokens, adminActivityLogs, badges, autoTasks, leaves, holidays, tasksReports,
-  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments,
+  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments, enquiries, followups,
   type Company, type InsertCompany,
   type User, type InsertUser,
   type Task, type InsertTask,
@@ -31,6 +31,8 @@ import {
   type Reward, type InsertReward,
   type AttendanceLog, type InsertAttendanceLog,
   type TeamAssignment, type InsertTeamAssignment,
+  type Enquiry, type InsertEnquiry,
+  type Followup, type InsertFollowup,
 } from "@shared/schema";
 import { eq, and, or, desc, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -290,6 +292,28 @@ export interface IStorage {
   getTeamLeaderByMember(memberId: number): Promise<User | null>;
   getAllTeamAssignments(companyId: number): Promise<TeamAssignment[]>;
   getTeamAssignmentsByMemberId(memberId: number): Promise<TeamAssignment[]>;
+  
+  // CRM - Enquiry operations
+  createEnquiry(enquiry: InsertEnquiry): Promise<Enquiry>;
+  getEnquiryById(id: number): Promise<Enquiry | null>;
+  getEnquiriesByCompanyId(companyId: number): Promise<Enquiry[]>;
+  updateEnquiry(id: number, updates: Partial<InsertEnquiry>): Promise<void>;
+  deleteEnquiry(id: number): Promise<void>;
+  getEnquiryStats(companyId: number): Promise<{
+    totalEnquiries: number;
+    monthEnquiries: number;
+    totalSales: number;
+    monthSales: number;
+    todayFollowups: number;
+    totalDrops: number;
+  }>;
+  
+  // CRM - Followup operations
+  createFollowup(followup: InsertFollowup): Promise<Followup>;
+  getFollowupsByEnquiryId(enquiryId: number): Promise<Followup[]>;
+  getFollowupsByCompanyId(companyId: number): Promise<Followup[]>;
+  updateFollowup(id: number, updates: Partial<InsertFollowup>): Promise<void>;
+  deleteFollowup(id: number): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -1774,6 +1798,100 @@ export class DbStorage implements IStorage {
         sql`${teamAssignments.removedAt} IS NULL`
       ))
       .orderBy(desc(teamAssignments.assignedAt));
+  }
+  
+  // CRM - Enquiry operations
+  async createEnquiry(enquiry: InsertEnquiry): Promise<Enquiry> {
+    const result = await db.insert(enquiries).values(enquiry).returning();
+    return result[0];
+  }
+  
+  async getEnquiryById(id: number): Promise<Enquiry | null> {
+    const result = await db.select().from(enquiries).where(eq(enquiries.id, id)).limit(1);
+    return result[0] || null;
+  }
+  
+  async getEnquiriesByCompanyId(companyId: number): Promise<Enquiry[]> {
+    return await db.select().from(enquiries)
+      .where(eq(enquiries.companyId, companyId))
+      .orderBy(desc(enquiries.createdAt));
+  }
+  
+  async updateEnquiry(id: number, updates: Partial<InsertEnquiry>): Promise<void> {
+    await db.update(enquiries)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(enquiries.id, id));
+  }
+  
+  async deleteEnquiry(id: number): Promise<void> {
+    await db.delete(enquiries).where(eq(enquiries.id, id));
+  }
+  
+  async getEnquiryStats(companyId: number): Promise<{
+    totalEnquiries: number;
+    monthEnquiries: number;
+    totalSales: number;
+    monthSales: number;
+    todayFollowups: number;
+    totalDrops: number;
+  }> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const currentMonth = `${year}-${month}`;
+    const today = `${year}-${month}-${day}`;
+    
+    const allEnquiries = await this.getEnquiriesByCompanyId(companyId);
+    
+    const totalEnquiries = allEnquiries.length;
+    const monthEnquiries = allEnquiries.filter(e => e.enquiryDate.startsWith(currentMonth)).length;
+    const totalSales = allEnquiries.filter(e => e.status === 'sales_closed').length;
+    const monthSales = allEnquiries.filter(e => e.status === 'sales_closed' && e.enquiryDate.startsWith(currentMonth)).length;
+    const totalDrops = allEnquiries.filter(e => e.status === 'dropped').length;
+    
+    const allFollowups = await this.getFollowupsByCompanyId(companyId);
+    const todayFollowups = allFollowups.filter(f => f.nextFollowupDate === today).length;
+    
+    return {
+      totalEnquiries,
+      monthEnquiries,
+      totalSales,
+      monthSales,
+      todayFollowups,
+      totalDrops,
+    };
+  }
+  
+  // CRM - Followup operations
+  async createFollowup(followup: InsertFollowup): Promise<Followup> {
+    const result = await db.insert(followups).values(followup).returning();
+    
+    await this.updateEnquiry(followup.enquiryId, { status: followup.enquiryStatus });
+    
+    return result[0];
+  }
+  
+  async getFollowupsByEnquiryId(enquiryId: number): Promise<Followup[]> {
+    return await db.select().from(followups)
+      .where(eq(followups.enquiryId, enquiryId))
+      .orderBy(desc(followups.createdAt));
+  }
+  
+  async getFollowupsByCompanyId(companyId: number): Promise<Followup[]> {
+    return await db.select().from(followups)
+      .where(eq(followups.companyId, companyId))
+      .orderBy(desc(followups.createdAt));
+  }
+  
+  async updateFollowup(id: number, updates: Partial<InsertFollowup>): Promise<void> {
+    await db.update(followups)
+      .set(updates)
+      .where(eq(followups.id, id));
+  }
+  
+  async deleteFollowup(id: number): Promise<void> {
+    await db.delete(followups).where(eq(followups.id, id));
   }
 }
 
