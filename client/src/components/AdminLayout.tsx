@@ -22,7 +22,8 @@ import {
   Clock,
   TrendingUp,
   Settings,
-  FileEdit
+  FileEdit,
+  Briefcase
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import BottomNav, { BottomNavItem } from "./BottomNav";
@@ -40,6 +41,7 @@ const navItems: NavItem[] = [
   { path: "/admin/company-profile", label: "Company Profile", icon: Building2 },
   { path: "/admin/company", label: "Company Settings", icon: BarChart3 },
   { path: "/admin/payment-history", label: "Payment History", icon: Receipt },
+  { path: "/admin/crm", label: "CRM", icon: Briefcase },
   { path: "/admin/users", label: "Users", icon: Users },
   { path: "/admin/reports", label: "Reports", icon: FileText },
   { path: "/admin/tasks", label: "Tasks", icon: CheckSquare },

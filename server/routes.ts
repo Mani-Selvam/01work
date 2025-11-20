@@ -4508,6 +4508,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CRM - Enquiry Routes (Admin Only)
+  app.get("/api/crm/enquiries", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const enquiries = await storage.getEnquiriesByCompanyId(requestingUser.companyId);
+      res.json(enquiries);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/crm/enquiries/:id", requireAdmin, async (req, res, next) => {
+    try {
+      const enquiry = await storage.getEnquiryById(parseInt(req.params.id));
+      if (!enquiry) {
+        return res.status(404).json({ message: "Enquiry not found" });
+      }
+      res.json(enquiry);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/crm/enquiries", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const enquiry = await storage.createEnquiry({
+        ...req.body,
+        companyId: requestingUser.companyId,
+        createdBy: requestingUserId,
+      });
+      
+      res.json(enquiry);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/crm/enquiries/:id", requireAdmin, async (req, res, next) => {
+    try {
+      await storage.updateEnquiry(parseInt(req.params.id), req.body);
+      res.json({ message: "Enquiry updated successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/crm/enquiries/:id", requireAdmin, async (req, res, next) => {
+    try {
+      await storage.deleteEnquiry(parseInt(req.params.id));
+      res.json({ message: "Enquiry deleted successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/crm/stats", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const stats = await storage.getEnquiryStats(requestingUser.companyId);
+      res.json(stats);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // CRM - Followup Routes (Admin Only)
+  app.get("/api/crm/followups", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const followups = await storage.getFollowupsByCompanyId(requestingUser.companyId);
+      res.json(followups);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/crm/followups/enquiry/:enquiryId", requireAdmin, async (req, res, next) => {
+    try {
+      const followups = await storage.getFollowupsByEnquiryId(parseInt(req.params.enquiryId));
+      res.json(followups);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/crm/followups", requireAdmin, async (req, res, next) => {
+    try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const followup = await storage.createFollowup({
+        ...req.body,
+        companyId: requestingUser.companyId,
+        createdBy: requestingUserId,
+      });
+      
+      res.json(followup);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/crm/followups/:id", requireAdmin, async (req, res, next) => {
+    try {
+      await storage.updateFollowup(parseInt(req.params.id), req.body);
+      res.json({ message: "Followup updated successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/crm/followups/:id", requireAdmin, async (req, res, next) => {
+    try {
+      await storage.deleteFollowup(parseInt(req.params.id));
+      res.json({ message: "Followup deleted successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
