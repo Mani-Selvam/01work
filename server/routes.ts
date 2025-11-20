@@ -4527,10 +4527,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/crm/enquiries/:id", requireAdmin, async (req, res, next) => {
     try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
       const enquiry = await storage.getEnquiryById(parseInt(req.params.id));
       if (!enquiry) {
         return res.status(404).json({ message: "Enquiry not found" });
       }
+      
+      // Verify enquiry belongs to user's company
+      if (enquiry.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       res.json(enquiry);
     } catch (error) {
       next(error);
@@ -4560,6 +4573,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/crm/enquiries/:id", requireAdmin, async (req, res, next) => {
     try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const enquiry = await storage.getEnquiryById(parseInt(req.params.id));
+      if (!enquiry) {
+        return res.status(404).json({ message: "Enquiry not found" });
+      }
+      
+      // Verify enquiry belongs to user's company
+      if (enquiry.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       await storage.updateEnquiry(parseInt(req.params.id), req.body);
       res.json({ message: "Enquiry updated successfully" });
     } catch (error) {
@@ -4569,6 +4599,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/crm/enquiries/:id", requireAdmin, async (req, res, next) => {
     try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const enquiry = await storage.getEnquiryById(parseInt(req.params.id));
+      if (!enquiry) {
+        return res.status(404).json({ message: "Enquiry not found" });
+      }
+      
+      // Verify enquiry belongs to user's company
+      if (enquiry.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       await storage.deleteEnquiry(parseInt(req.params.id));
       res.json({ message: "Enquiry deleted successfully" });
     } catch (error) {
@@ -4611,6 +4658,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/crm/followups/enquiry/:enquiryId", requireAdmin, async (req, res, next) => {
     try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      // Verify enquiry belongs to user's company
+      const enquiry = await storage.getEnquiryById(parseInt(req.params.enquiryId));
+      if (!enquiry) {
+        return res.status(404).json({ message: "Enquiry not found" });
+      }
+      
+      if (enquiry.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       const followups = await storage.getFollowupsByEnquiryId(parseInt(req.params.enquiryId));
       res.json(followups);
     } catch (error) {
@@ -4627,6 +4691,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Company not found" });
       }
       
+      // Verify the enquiry belongs to the user's company
+      const enquiry = await storage.getEnquiryById(parseInt(req.body.enquiryId));
+      if (!enquiry) {
+        return res.status(404).json({ message: "Enquiry not found" });
+      }
+      
+      if (enquiry.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied - enquiry belongs to another company" });
+      }
+      
       const followup = await storage.createFollowup({
         ...req.body,
         companyId: requestingUser.companyId,
@@ -4641,6 +4715,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/crm/followups/:id", requireAdmin, async (req, res, next) => {
     try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const followup = await storage.getFollowupById(parseInt(req.params.id));
+      if (!followup) {
+        return res.status(404).json({ message: "Followup not found" });
+      }
+      
+      // Verify followup belongs to user's company
+      if (followup.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       await storage.updateFollowup(parseInt(req.params.id), req.body);
       res.json({ message: "Followup updated successfully" });
     } catch (error) {
@@ -4650,6 +4741,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/crm/followups/:id", requireAdmin, async (req, res, next) => {
     try {
+      const requestingUserId = parseInt(req.headers["x-user-id"] as string);
+      const requestingUser = await storage.getUserById(requestingUserId);
+      
+      if (!requestingUser || !requestingUser.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const followup = await storage.getFollowupById(parseInt(req.params.id));
+      if (!followup) {
+        return res.status(404).json({ message: "Followup not found" });
+      }
+      
+      // Verify followup belongs to user's company
+      if (followup.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       await storage.deleteFollowup(parseInt(req.params.id));
       res.json({ message: "Followup deleted successfully" });
     } catch (error) {
