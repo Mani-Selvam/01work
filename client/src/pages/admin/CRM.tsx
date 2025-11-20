@@ -65,6 +65,7 @@ export default function CRM() {
   const [currentSection, setCurrentSection] = useState(0);
   const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [followupFormKey, setFollowupFormKey] = useState(0);
   const { toast } = useToast();
 
   const { data: stats } = useQuery<CRMStats>({
@@ -124,6 +125,7 @@ export default function CRM() {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/enquiries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
       toast({ title: "Followup created successfully" });
+      setFollowupFormKey(prev => prev + 1);
       setCurrentSection(3);
     },
   });
@@ -287,7 +289,7 @@ export default function CRM() {
 
       <Card>
         <CardContent className="p-6">
-          <form onSubmit={handleEnquirySubmit} className="space-y-4">
+          <form key={selectedEnquiry?.id || 'new'} onSubmit={handleEnquirySubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="customerName">Customer Name *</Label>
@@ -437,7 +439,10 @@ export default function CRM() {
     <div key="followup-list" className="min-w-full flex-shrink-0 p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-2xl font-bold" data-testid="text-followup-list-title">Followup List</h2>
-        <Button onClick={() => setCurrentSection(4)} data-testid="button-add-followup">
+        <Button onClick={() => {
+          setFollowupFormKey(prev => prev + 1);
+          setCurrentSection(4);
+        }} data-testid="button-add-followup">
           <Plus className="mr-2 h-4 w-4" />
           Add Followup
         </Button>
@@ -481,7 +486,7 @@ export default function CRM() {
 
       <Card>
         <CardContent className="p-6">
-          <form onSubmit={handleFollowupSubmit} className="space-y-4">
+          <form key={followupFormKey} onSubmit={handleFollowupSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="enquiryId">Select Enquiry *</Label>
