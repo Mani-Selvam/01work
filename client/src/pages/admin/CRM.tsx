@@ -65,6 +65,7 @@ export default function CRM() {
   const [currentSection, setCurrentSection] = useState(0);
   const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [enquiryFormKey, setEnquiryFormKey] = useState(0);
   const [followupFormKey, setFollowupFormKey] = useState(0);
   const { toast } = useToast();
 
@@ -89,6 +90,7 @@ export default function CRM() {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
       toast({ title: "Enquiry created successfully" });
       setSelectedEnquiry(null);
+      setEnquiryFormKey(prev => prev + 1);
       setCurrentSection(1);
     },
   });
@@ -210,6 +212,7 @@ export default function CRM() {
         <Button
           onClick={() => {
             setSelectedEnquiry(null);
+            setEnquiryFormKey(prev => prev + 1);
             setCurrentSection(2);
           }}
           data-testid="button-add-enquiry"
@@ -290,7 +293,7 @@ export default function CRM() {
 
       <Card>
         <CardContent className="p-6">
-          <form key={selectedEnquiry?.id || 'new'} onSubmit={handleEnquirySubmit} className="space-y-4">
+          <form key={selectedEnquiry?.id || `new-${enquiryFormKey}`} onSubmit={handleEnquirySubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="customerName">Customer Name *</Label>
@@ -346,7 +349,7 @@ export default function CRM() {
 
               <div className="space-y-2">
                 <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select key={`payment-${selectedEnquiry?.id || 'new'}`} name="paymentMethod" defaultValue={selectedEnquiry?.paymentMethod || ""}>
+                <Select key={`payment-${selectedEnquiry?.id || enquiryFormKey}`} name="paymentMethod" defaultValue={selectedEnquiry?.paymentMethod || ""}>
                   <SelectTrigger data-testid="select-payment-method">
                     <SelectValue placeholder="Select payment method" />
                   </SelectTrigger>
@@ -374,7 +377,7 @@ export default function CRM() {
 
               <div className="space-y-2">
                 <Label htmlFor="leadSource">Lead Source</Label>
-                <Select key={`source-${selectedEnquiry?.id || 'new'}`} name="leadSource" defaultValue={selectedEnquiry?.leadSource || ""}>
+                <Select key={`source-${selectedEnquiry?.id || enquiryFormKey}`} name="leadSource" defaultValue={selectedEnquiry?.leadSource || ""}>
                   <SelectTrigger data-testid="select-lead-source">
                     <SelectValue placeholder="Select lead source" />
                   </SelectTrigger>
@@ -390,7 +393,7 @@ export default function CRM() {
 
               <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
-                <Select key={`status-${selectedEnquiry?.id || 'new'}`} name="status" defaultValue={selectedEnquiry?.status || "new"}>
+                <Select key={`status-${selectedEnquiry?.id || enquiryFormKey}`} name="status" defaultValue={selectedEnquiry?.status || "new"}>
                   <SelectTrigger data-testid="select-status">
                     <SelectValue />
                   </SelectTrigger>
