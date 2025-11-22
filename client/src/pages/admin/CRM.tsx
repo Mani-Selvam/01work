@@ -22,9 +22,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, TrendingUp, TrendingDown, Calendar, UserPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, TrendingUp, TrendingDown, Calendar, UserPlus, CheckCircle2, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import type { Enquiry, Followup } from "@shared/schema";
+import FollowupCalendar from "@/components/FollowupCalendar";
 
 const STATUS_OPTIONS = [
   { value: "new", label: "New" },
@@ -59,6 +60,7 @@ interface CRMStats {
   monthSales: number;
   todayFollowups: number;
   totalDrops: number;
+  monthDrops: number;
 }
 
 export default function CRM() {
@@ -120,6 +122,28 @@ export default function CRM() {
     },
   });
 
+  const markAsWonMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/crm/enquiries/${id}`, "PATCH", { status: "sales_closed" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      toast({ title: "Enquiry marked as Won!", description: "Sales closed successfully" });
+    },
+  });
+
+  const markAsLostMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/crm/enquiries/${id}`, "PATCH", { status: "dropped" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      toast({ title: "Enquiry marked as Lost", description: "Moved to dropped status" });
+    },
+  });
+
   const createFollowupMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("/api/crm/followups", "POST", data);
@@ -165,7 +189,8 @@ export default function CRM() {
     // Section 0: Dashboard Overview
     <div key="dashboard" className="min-w-full flex-shrink-0 p-6 space-y-6">
       <h2 className="text-2xl font-bold" data-testid="text-crm-dashboard-title">CRM Dashboard</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card data-testid="card-total-enquiries">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Enquiries</CardTitle>
@@ -179,31 +204,48 @@ export default function CRM() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-total-sales">
+        <Card data-testid="card-won-enquiries" className="border-green-200 dark:border-green-900">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Won Enquiries</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalSales || 0}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-500">{stats?.totalSales || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats?.monthSales || 0} this month
             </p>
           </CardContent>
         </Card>
 
+        <Card data-testid="card-lost-enquiries" className="border-red-200 dark:border-red-900">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Lost Enquiries</CardTitle>
+            <XCircle className="h-4 w-4 text-red-600 dark:text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-500">{stats?.totalDrops || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats?.monthDrops || 0} this month
+            </p>
+          </CardContent>
+        </Card>
+
         <Card data-testid="card-today-followups">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today Followups</CardTitle>
+            <CardTitle className="text-sm font-medium">Today's Follow-ups</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.todayFollowups || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.totalDrops || 0} total drops
+              Scheduled for today
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mt-6">
+        <FollowupCalendar followups={followups} enquiries={enquiries} />
       </div>
     </div>,
 
@@ -257,6 +299,29 @@ export default function CRM() {
                     <TableCell>{enq.enquiryDate}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
+                        {enq.status !== 'sales_closed' && enq.status !== 'dropped' && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                              onClick={() => markAsWonMutation.mutate(enq.id)}
+                              data-testid={`button-mark-won-${enq.id}`}
+                              title="Mark as Won"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => markAsLostMutation.mutate(enq.id)}
+                              data-testid={`button-mark-lost-${enq.id}`}
+                              title="Mark as Lost"
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </Button>
+                          </>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -481,7 +546,12 @@ export default function CRM() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {followups.map((followup) => (
+                {followups
+                  .filter((followup) => {
+                    const enquiry = enquiries.find(e => e.id === followup.enquiryId);
+                    return enquiry?.status !== 'dropped';
+                  })
+                  .map((followup) => (
                   <TableRow key={followup.id} data-testid={`row-followup-${followup.id}`}>
                     <TableCell>{followup.enquiryId}</TableCell>
                     <TableCell>{followup.followupDate}</TableCell>

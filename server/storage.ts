@@ -1834,6 +1834,7 @@ export class DbStorage implements IStorage {
     monthSales: number;
     todayFollowups: number;
     totalDrops: number;
+    monthDrops: number;
   }> {
     const now = new Date();
     const year = now.getFullYear();
@@ -1849,6 +1850,7 @@ export class DbStorage implements IStorage {
     const totalSales = allEnquiries.filter(e => e.status === 'sales_closed').length;
     const monthSales = allEnquiries.filter(e => e.status === 'sales_closed' && e.enquiryDate.startsWith(currentMonth)).length;
     const totalDrops = allEnquiries.filter(e => e.status === 'dropped').length;
+    const monthDrops = allEnquiries.filter(e => e.status === 'dropped' && e.enquiryDate.startsWith(currentMonth)).length;
     
     const allFollowups = await this.getFollowupsByCompanyId(companyId);
     const todayFollowups = allFollowups.filter(f => f.nextFollowupDate === today).length;
@@ -1860,6 +1862,7 @@ export class DbStorage implements IStorage {
       monthSales,
       todayFollowups,
       totalDrops,
+      monthDrops,
     };
   }
   
