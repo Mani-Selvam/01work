@@ -523,7 +523,7 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   createdAt: true,
 }).extend({
-  messageType: z.enum(['admin_to_employee', 'admin_to_team_leader', 'team_leader_to_employee', 'employee_to_team_leader']),
+  messageType: z.enum(['admin_to_employee', 'admin_to_team_leader', 'team_leader_to_employee', 'employee_to_team_leader', 'team_leader_to_admin', 'employee_to_admin', 'admin_to_admin']),
 });
 
 export const insertRatingSchema = createInsertSchema(ratings).omit({
