@@ -1,7 +1,7 @@
 ﻿import { db } from "./db";
 import { 
   companies, users, tasks, reports, messages, ratings, fileUploads, archiveReports, groupMessages, groupMessageReplies, taskTimeLogs, feedbacks, slotPricing, companyPayments, passwordResetTokens, adminActivityLogs, badges, autoTasks, leaves, holidays, tasksReports,
-  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments, enquiries, followups,
+  shifts, attendancePolicies, attendanceRecords, correctionRequests, rewards, attendanceLogs, teamAssignments, enquiries, followups, deviceTokens,
   type Company, type InsertCompany,
   type User, type InsertUser,
   type Task, type InsertTask,
@@ -33,6 +33,7 @@ import {
   type TeamAssignment, type InsertTeamAssignment,
   type Enquiry, type InsertEnquiry,
   type Followup, type InsertFollowup,
+  type DeviceToken, type InsertDeviceToken,
 } from "@shared/schema";
 import { eq, and, or, desc, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -99,6 +100,11 @@ export interface IStorage {
   getUnreadMessagesByReceiverId(receiverId: number): Promise<Message[]>;
   markMessageAsRead(id: number): Promise<void>;
   getAllMessages(): Promise<Message[]>;
+  
+  // Device token operations
+  createOrUpdateDeviceToken(token: InsertDeviceToken): Promise<DeviceToken>;
+  getDeviceTokensByUserId(userId: number): Promise<DeviceToken[]>;
+  deleteDeviceToken(token: string): Promise<void>;
   
   // Rating operations
   createRating(rating: InsertRating): Promise<Rating>;
@@ -665,6 +671,30 @@ export class DbStorage implements IStorage {
 
   async getAllMessages(): Promise<Message[]> {
     return await db.select().from(messages).orderBy(desc(messages.createdAt));
+  }
+
+  async createOrUpdateDeviceToken(tokenData: InsertDeviceToken): Promise<DeviceToken> {
+    const existing = await db.select().from(deviceTokens).where(eq(deviceTokens.token, tokenData.token)).limit(1);
+    
+    if (existing.length > 0) {
+      await db.update(deviceTokens)
+        .set({ ...tokenData, updatedAt: new Date() })
+        .where(eq(deviceTokens.token, tokenData.token));
+      
+      const result = await db.select().from(deviceTokens).where(eq(deviceTokens.token, tokenData.token)).limit(1);
+      return result[0];
+    }
+    
+    const result = await db.insert(deviceTokens).values(tokenData).returning();
+    return result[0];
+  }
+
+  async getDeviceTokensByUserId(userId: number): Promise<DeviceToken[]> {
+    return await db.select().from(deviceTokens).where(eq(deviceTokens.userId, userId));
+  }
+
+  async deleteDeviceToken(token: string): Promise<void> {
+    await db.delete(deviceTokens).where(eq(deviceTokens.token, token));
   }
 
   async createRating(rating: InsertRating): Promise<Rating> {

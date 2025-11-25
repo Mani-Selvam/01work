@@ -2660,6 +2660,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Device token routes
+  app.post("/api/device-tokens", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!requestingUser.isActive) {
+        return res.status(401).json({ message: "User account disabled", code: "USER_INACTIVE" });
+      }
+
+      const { token, deviceType } = req.body;
+      if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+      }
+
+      const deviceToken = await storage.createOrUpdateDeviceToken({
+        userId: requestingUser.id,
+        token,
+        deviceType: deviceType || 'web',
+      });
+
+      res.json(deviceToken);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/device-tokens/:token", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!requestingUser.isActive) {
+        return res.status(401).json({ message: "User account disabled", code: "USER_INACTIVE" });
+      }
+
+      const { token } = req.params;
+      await storage.deleteDeviceToken(token);
+
+      res.json({ message: "Device token deleted successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Feedback routes
   app.post("/api/feedbacks", async (req, res, next) => {
     try {
