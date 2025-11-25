@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, MessageSquare } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { Send, MessageSquare, Mail } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 
@@ -37,8 +37,7 @@ export default function Messages() {
     enabled: !!dbUserId,
   });
 
-  // Fetch assigned team leader using dedicated endpoint
-  const { data: teamLeaderInfo, isLoading: loadingLeader, error: leaderError } = useQuery<TeamLeader | null>({
+  const { data: teamLeaderInfo, isLoading: loadingLeader } = useQuery<TeamLeader | null>({
     queryKey: ['/api/team-leader/me'],
     queryFn: async () => {
       const res = await fetch('/api/team-leader/me', {
@@ -47,8 +46,7 @@ export default function Messages() {
           'x-user-id': dbUserId?.toString() || '',
         },
       });
-      
-      // Handle "NOT_ASSIGNED" case specifically
+
       if (res.status === 404) {
         const body = await res.json().catch(() => ({}));
         if (body.message === 'NOT_ASSIGNED') {
@@ -56,11 +54,11 @@ export default function Messages() {
         }
         throw new Error('User not found');
       }
-      
+
       if (!res.ok) {
         throw new Error('Failed to fetch team leader');
       }
-      
+
       return res.json();
     },
     enabled: !!dbUserId,
@@ -71,10 +69,10 @@ export default function Messages() {
   useWebSocket((data) => {
     if (data.type === 'NEW_MESSAGE') {
       const messageData = data.data;
-      
+
       if (messageData.senderId === dbUserId || messageData.receiverId === dbUserId) {
         queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-        
+
         if (messageData.receiverId === dbUserId) {
           toast({
             title: "New Message",
@@ -106,33 +104,27 @@ export default function Messages() {
     },
   });
 
-  // Get messages from team leader OR admin
-  const conversationMessages = useMemo(() => {
-    if (!teamLeaderInfo && !allMessages.some(m => m.messageType === 'admin_to_employee' && m.receiverId === dbUserId)) {
-      return [];
-    }
-
+  // Separate admin and team leader messages
+  const adminMessages = useMemo(() => {
     return allMessages
-      .filter(msg => {
-        // Team leader conversation
-        const isTeamLeaderMsg = (msg.senderId === teamLeaderInfo?.id || msg.receiverId === teamLeaderInfo?.id) &&
-                                (msg.messageType === 'team_leader_to_employee' || msg.messageType === 'employee_to_team_leader');
-        
-        // Admin message
-        const isAdminMsg = msg.messageType === 'admin_to_employee' && msg.receiverId === dbUserId;
-        
-        return isTeamLeaderMsg || isAdminMsg;
-      })
+      .filter(msg => msg.messageType === 'admin_to_employee' && msg.receiverId === dbUserId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [allMessages, dbUserId]);
+
+  const teamLeaderMessages = useMemo(() => {
+    if (!teamLeaderInfo) return [];
+    return allMessages
+      .filter(msg => 
+        ((msg.senderId === teamLeaderInfo.id && msg.receiverId === dbUserId) ||
+         (msg.senderId === dbUserId && msg.receiverId === teamLeaderInfo.id)) &&
+        (msg.messageType === 'team_leader_to_employee' || msg.messageType === 'employee_to_team_leader')
+      )
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [teamLeaderInfo, allMessages, dbUserId]);
 
-  const unreadCount = conversationMessages.filter(
-    msg => msg.senderId === teamLeaderInfo?.id && !msg.readStatus
-  ).length;
-
   const handleSendMessage = () => {
     if (!teamLeaderInfo || !messageText.trim()) return;
-    
+
     sendMessageMutation.mutate({
       receiverId: teamLeaderInfo.id,
       message: messageText.trim(),
@@ -156,114 +148,151 @@ export default function Messages() {
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
+          View messages from admin and your team leader
         </p>
       </div>
 
-      <Card>
-        {teamLeaderInfo || conversationMessages.length > 0 ? (
-          <>
-            <CardHeader className="border-b">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={teamLeaderInfo?.photoURL} />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {teamLeaderInfo ? getInitials(teamLeaderInfo.displayName) : 'TL'}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-base">{teamLeaderInfo?.displayName || 'Team Messages'}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {teamLeaderInfo ? 'Your Team Leader' : 'Messages from team'}
+      {/* ADMIN MESSAGES SECTION */}
+      <Card data-testid="card-admin-messages">
+        <CardHeader className="border-b">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Mail className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Admin Messages</CardTitle>
+              <p className="text-sm text-muted-foreground">Announcements & notifications from administration</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {adminMessages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Mail className="h-12 w-12 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  No admin messages yet
+                </p>
+              </div>
+            ) : (
+              adminMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className="p-3 bg-muted rounded-md border border-border/50"
+                  data-testid={`message-admin-${msg.id}`}
+                >
+                  <p className="text-sm text-foreground">{msg.message}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {new Date(msg.createdAt).toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </p>
                 </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* TEAM LEADER MESSAGES SECTION */}
+      {teamLeaderInfo && (
+        <Card data-testid="card-team-leader-messages">
+          <CardHeader className="border-b">
+            <div className="flex items-center gap-3">
+              <Avatar>
+                <AvatarImage src={teamLeaderInfo.photoURL} />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {getInitials(teamLeaderInfo.displayName)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <CardTitle className="text-base">{teamLeaderInfo.displayName}</CardTitle>
+                <p className="text-sm text-muted-foreground">Your Team Leader</p>
               </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
-                {conversationMessages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      No messages yet. Start a conversation!
-                    </p>
-                  </div>
-                ) : (
-                  conversationMessages.map((msg) => {
-                    const isOwn = msg.senderId === dbUserId;
-                    const isFromAdmin = msg.messageType === 'admin_to_employee';
-                    return (
-                      <div key={msg.id} data-testid={`message-${msg.id}`}>
-                        {isFromAdmin && (
-                          <p className="text-xs text-muted-foreground mb-1 font-semibold">Admin Message</p>
-                        )}
-                        <div
-                          className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[70%] ${
-                              isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                            } rounded-md p-3`}
-                          >
-                            <p className="text-sm">{msg.message}</p>
-                            <p
-                              className={`text-xs mt-1 ${
-                                isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                              }`}
-                            >
-                              {new Date(msg.createdAt).toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-              {teamLeaderInfo && (
-                <div className="flex gap-2 pt-4 border-t">
-                  <Textarea
-                    placeholder="Type your message..."
-                    className="resize-none"
-                    rows={2}
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    data-testid="input-message"
-                  />
-                  <Button
-                    size="icon"
-                    onClick={handleSendMessage}
-                    disabled={!messageText.trim() || sendMessageMutation.isPending}
-                    data-testid="button-send-message"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
+              {teamLeaderMessages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    No messages yet. Start a conversation!
+                  </p>
                 </div>
+              ) : (
+                teamLeaderMessages.map((msg) => {
+                  const isOwn = msg.senderId === dbUserId;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                      data-testid={`message-team-leader-${msg.id}`}
+                    >
+                      <div
+                        className={`max-w-[70%] ${
+                          isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                        } rounded-md p-3`}
+                      >
+                        <p className="text-sm">{msg.message}</p>
+                        <p
+                          className={`text-xs mt-1 ${
+                            isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {new Date(msg.createdAt).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
               )}
-            </CardContent>
-          </>
-        ) : (
-          <CardContent className="flex flex-col items-center justify-center py-24" data-testid="card-not-assigned">
+            </div>
+            <div className="flex gap-2 pt-4 border-t">
+              <Textarea
+                placeholder="Type your message..."
+                className="resize-none"
+                rows={2}
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                data-testid="input-message"
+              />
+              <Button
+                size="icon"
+                onClick={handleSendMessage}
+                disabled={!messageText.trim() || sendMessageMutation.isPending}
+                data-testid="button-send-message"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!teamLeaderInfo && adminMessages.length === 0 && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-24">
             <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2" data-testid="text-not-assigned-title">No Team Leader Assigned</h3>
-            <p className="text-sm text-muted-foreground text-center mb-4" data-testid="text-not-assigned-description">
+            <h3 className="text-lg font-medium mb-2">No Team Leader Assigned</h3>
+            <p className="text-sm text-muted-foreground text-center">
               You haven't been assigned to a team leader yet.
             </p>
-            <p className="text-sm text-muted-foreground text-center" data-testid="text-not-assigned-guidance">
-              Contact your administrator to be assigned to a team.
-            </p>
           </CardContent>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
