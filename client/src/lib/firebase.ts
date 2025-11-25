@@ -39,16 +39,49 @@ if (isFirebaseConfigured) {
       messaging = getMessaging(app);
       
       // Register service worker for push notifications
-      navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
-        .then(() => {
-          console.log('Service worker registered for push notifications');
-          // Send Firebase config to service worker
-          navigator.serviceWorker.controller?.postMessage({
-            type: 'FIREBASE_CONFIG',
-            config: firebaseConfig,
+      const registerSW = async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { 
+            scope: '/',
           });
-        })
-        .catch((error) => console.error('Service worker registration failed:', error));
+          console.log('Service worker registered for push notifications');
+          
+          // Send Firebase config to all service worker clients
+          const clients = await registration.clients.getAll();
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'FIREBASE_CONFIG',
+              config: firebaseConfig,
+            });
+          });
+          
+          // Also send to controller
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'FIREBASE_CONFIG',
+              config: firebaseConfig,
+            });
+          }
+          
+          // Listen for updates and send config again
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'FIREBASE_CONFIG',
+                config: firebaseConfig,
+              });
+            }
+          });
+        } catch (error) {
+          console.error('Service worker registration failed:', error);
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        window.addEventListener('load', registerSW);
+      } else {
+        registerSW();
+      }
     } catch (error) {
       console.error("Failed to initialize Firebase Messaging:", error);
     }

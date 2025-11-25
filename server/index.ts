@@ -8,10 +8,14 @@ import session from "express-session";
 import passport from "./passport";
 import dotenv from "dotenv";
 import cron from "node-cron";
+import path from "path";
 dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve public files (including service worker)
+app.use(express.static(path.join(import.meta.dirname, "public")));
 
 app.use(
   session({
