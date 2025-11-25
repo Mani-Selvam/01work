@@ -59,27 +59,44 @@ export default function AdminMessages() {
     }
   });
 
-  // Build conversations from messages
+  // Build conversations from messages and all available users
   useEffect(() => {
     const convMap = new Map<string, Conversation>();
 
-    // Direct message conversations
+    // First, add all team members and team leaders as conversation starters
+    const teamUsers = users.filter(u => u.id !== dbUserId && (u.role === 'company_member' || u.role === 'team_leader'));
+    teamUsers.forEach(user => {
+      const key = `direct-${user.id}`;
+      convMap.set(key, {
+        id: key,
+        type: "direct",
+        userId: user.id,
+        userName: user.displayName || "Unknown",
+        userRole: user.role || "",
+        lastMessage: "No messages yet",
+        lastMessageTime: new Date(0),
+        unreadCount: 0,
+      });
+    });
+
+    // Then update with actual messages
     privateMessages.forEach(msg => {
       const otherUserId = msg.senderId === dbUserId ? msg.receiverId : msg.senderId;
       const otherUser = users.find(u => u.id === otherUserId);
-      const key = `direct-${Math.min(otherUserId, msg.senderId === dbUserId ? msg.senderId : msg.receiverId)}-${Math.max(otherUserId, msg.senderId === dbUserId ? msg.senderId : msg.receiverId)}`;
+      const key = `direct-${otherUserId}`;
       
-      if (!convMap.has(key) || new Date(msg.createdAt) > (convMap.get(key)?.lastMessageTime || new Date(0))) {
-        convMap.set(key, {
-          id: key,
-          type: "direct",
-          userId: otherUserId,
-          userName: otherUser?.displayName || "Unknown",
-          userRole: otherUser?.role || "",
-          lastMessage: msg.message,
-          lastMessageTime: new Date(msg.createdAt),
-          unreadCount: msg.readStatus ? 0 : (convMap.get(key)?.unreadCount || 0) + 1,
-        });
+      if (convMap.has(key)) {
+        const lastMessageTime = new Date(msg.createdAt);
+        const current = convMap.get(key)!;
+        
+        if (lastMessageTime > (current.lastMessageTime || new Date(0))) {
+          convMap.set(key, {
+            ...current,
+            lastMessage: msg.message,
+            lastMessageTime,
+            unreadCount: msg.readStatus ? 0 : (current.unreadCount || 0) + 1,
+          });
+        }
       }
     });
 
@@ -96,9 +113,23 @@ export default function AdminMessages() {
       });
     }
 
-    setConversations(Array.from(convMap.values()).sort((a, b) => 
-      (b.lastMessageTime?.getTime() || 0) - (a.lastMessageTime?.getTime() || 0)
-    ));
+    // Sort by most recent message first, then by user name
+    const sorted = Array.from(convMap.values()).sort((a, b) => {
+      // Group announcements always at top
+      if (a.type === 'group') return -1;
+      if (b.type === 'group') return 1;
+      
+      // Then sort by most recent message
+      const timeA = a.lastMessageTime?.getTime() || 0;
+      const timeB = b.lastMessageTime?.getTime() || 0;
+      
+      if (timeA !== timeB) return timeB - timeA;
+      
+      // If same time, sort by name
+      return (a.userName || '').localeCompare(b.userName || '');
+    });
+
+    setConversations(sorted);
   }, [privateMessages, groupMessages, users, dbUserId]);
 
   const sendPrivateMessageMutation = useMutation({
