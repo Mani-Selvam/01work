@@ -14,8 +14,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Serve public files (including service worker)
-app.use(express.static(path.join(import.meta.dirname, "public")));
+// Serve public files (including service worker) from root public directory
+app.use(express.static(path.join(import.meta.dirname, "..", "public")));
 
 app.use(
   session({

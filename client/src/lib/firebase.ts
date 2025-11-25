@@ -73,7 +73,7 @@ if (isFirebaseConfigured) {
             }
           });
         } catch (error) {
-          console.error('Service worker registration failed:', error);
+          console.warn('Service worker registration error (non-critical):', error);
         }
       };
       
