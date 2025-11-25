@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
+import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/components/LoginPage";
 import SuperAdminLogin from "@/pages/SuperAdminLogin";
@@ -327,6 +328,7 @@ function App() {
         <AuthProvider>
           <WebSocketProvider>
             <Toaster />
+            <NotificationPermissionBanner />
             <Router />
           </WebSocketProvider>
         </AuthProvider>

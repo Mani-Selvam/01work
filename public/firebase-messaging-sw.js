@@ -1,6 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
+// Initialize Firebase Messaging with config sent from main app
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'FIREBASE_CONFIG') {
     firebase.initializeApp(event.data.config);
@@ -25,22 +26,28 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Handle notification clicks - deep linking
 self.addEventListener('notificationclick', (event) => {
   console.log('Notification clicked:', event);
   event.notification.close();
 
-  const urlToOpen = event.notification.data?.url || '/';
+  const navigationUrl = event.notification.data?.url || '/';
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Try to focus existing window
       for (const client of clientList) {
-        if (client.url.includes(new URL(urlToOpen).pathname) && 'focus' in client) {
+        const clientPath = new URL(client.url).pathname;
+        const targetPath = new URL(navigationUrl, self.location.origin).pathname;
+        
+        if (clientPath === targetPath || clientPath.startsWith('/')) {
           return client.focus();
         }
       }
       
+      // If no matching window, open new one
       if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
+        return clients.openWindow(navigationUrl);
       }
     })
   );

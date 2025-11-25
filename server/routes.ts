@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { broadcast } from "./index";
+import { sendPushNotificationToUser } from "./lib/firebase-admin";
 import { insertCompanySchema, insertUserSchema, insertTaskSchema, insertReportSchema, insertMessageSchema, insertRatingSchema, insertFileUploadSchema, insertGroupMessageSchema, insertGroupMessageReplySchema, insertFeedbackSchema, loginSchema, signupSchema, firebaseSigninSchema, companyRegistrationSchema, companyBasicRegistrationSchema, superAdminLoginSchema, companyAdminLoginSchema, companyUserLoginSchema, insertSlotPricingSchema, insertCompanyPaymentSchema, updatePaymentStatusSchema, slotPurchaseSchema, passwordResetRequestSchema, passwordResetSchema, insertAttendanceRecordSchema, insertCorrectionRequestSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -2079,6 +2080,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
+      // Send push notification to receiver
+      sendPushNotificationToUser(
+        message.receiverId,
+        'New Message',
+        `${requestingUser.displayName}: ${message.message.substring(0, 50)}${message.message.length > 50 ? '...' : ''}`,
+        {
+          messageId: message.id.toString(),
+          url: '/user/messages',
+        },
+        storage
+      ).catch(error => console.error('Failed to send push notification:', error));
+      
       res.json(message);
     } catch (error) {
       next(error);
@@ -2516,6 +2529,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           senderName: requestingUser.displayName,
         }
       });
+      
+      // Send push notification to all company users
+      const companyUsers = await storage.getUsersByCompanyId(requestingUser.companyId);
+      const otherUsers = companyUsers.filter(u => u.id !== requestingUser.id);
+      for (const user of otherUsers) {
+        sendPushNotificationToUser(
+          user.id,
+          message.title,
+          message.message.substring(0, 100),
+          {
+            messageId: message.id.toString(),
+            url: '/user/announcements',
+          },
+          storage
+        ).catch(error => console.error('Failed to send push notification:', error));
+      }
       
       res.json(message);
     } catch (error) {
