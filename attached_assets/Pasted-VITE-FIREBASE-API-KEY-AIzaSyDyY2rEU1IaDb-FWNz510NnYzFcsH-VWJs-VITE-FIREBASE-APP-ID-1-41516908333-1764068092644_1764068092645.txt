@@ -1,13 +1,3 @@
-SESSION_SECRET = uKNSNiKUEV+rDiN/FCT4LNgqfKhi1UCaKn2/z4pX6FzDyfxH2pQLrTop4uIM3EnaU5rvvVqE/aI01NfomO8Nyg==
-DATABASE_URL =postgresql://neondb_owner:npg_RlxngT1zMm8y@ep-frosty-queen-a4mcrx3a-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-PGDATABASE = neondb
-PGHOST = ep-fancy-hall-aggtle0g.c-2.eu-central-1.aws.neon.tech
-PGPORT = 5432
-PGUSER = neondb_owner
-PGPASSWORD = npg_j2Y7ndSAyFzw
-
-
-
 VITE_FIREBASE_API_KEY = AIzaSyDyY2rEU1IaDb-FWNz510NnYzFcsH_VWJs
 VITE_FIREBASE_APP_ID = 1:415169083335:web:e80bd4ae2d7fb57471cbe2
 VITE_FIREBASE_PROJECT_ID = worklogix-2b22c
@@ -28,12 +18,3 @@ FIREBASE_SERVICE_ACCOUNT_KEY = {
   "universe_domain": "googleapis.com"
 }
 VITE_FIREBASE_VAPID_KEY = BAOa9YXPygJjYmjh2osYVTHdYs2pwk7UBIUtAgdWijK8cxPNUHJ8CTsAnNJ0uMnQhq3_R3YaKeX_fojFOjSL8CE
-  
-EMAIL_PASS=jfwypujeccuhhjgs
-
-EMAIL_USER=manigame511@gmail.com
-
-
-GOOGLE_CLIENT_ID=em26rmr8uas0e82monrdnikcaupffn7h.apps.googleusercontent.com
-
-GOOGLE_CLIENT_SECRET=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

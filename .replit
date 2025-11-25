@@ -68,3 +68,12 @@ waitForPort = 5000
 [agent]
 integrations = ["javascript_database:1.0.0", "firebase_barebones_javascript:1.0.0", "resend:1.0.0"]
 expertMode = true
+
+[userenv]
+
+[userenv.shared]
+VITE_FIREBASE_API_KEY = "AIzaSyDyY2rEU1IaDb-FWNz510NnYzFcsH_VWJs"
+VITE_FIREBASE_APP_ID = "1:415169083335:web:e80bd4ae2d7fb57471cbe2"
+VITE_FIREBASE_PROJECT_ID = "worklogix-2b22c"
+VITE_FIREBASE_MESSAGING_SENDER_ID = "415169083335"
+VITE_FIREBASE_VAPID_KEY = "BAOa9YXPygJjYmjh2osYVTHdYs2pwk7UBIUtAgdWijK8cxPNUHJ8CTsAnNJ0uMnQhq3_R3YaKeX_fojFOjSL8CE"
