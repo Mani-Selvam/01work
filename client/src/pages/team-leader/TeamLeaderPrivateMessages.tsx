@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Mail, MailOpen } from "lucide-react";
+import { useWebSocket } from "@/contexts/WebSocketContext";
+import { queryClient } from "@/lib/queryClient";
 
 interface Message {
   id: number;
@@ -35,6 +37,17 @@ export default function TeamLeaderPrivateMessages() {
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ['/api/users'],
+  });
+
+  // Real-time message updates via WebSocket
+  useWebSocket((data) => {
+    if (data.type === 'NEW_MESSAGE') {
+      const messageData = data.data;
+      // Refresh messages when new admin messages arrive
+      if (messageData.messageType === 'admin_to_team_leader' && messageData.receiverId === dbUserId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      }
+    }
   });
 
   const adminMessages = allMessages.filter(

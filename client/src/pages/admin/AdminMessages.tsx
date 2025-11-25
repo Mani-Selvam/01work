@@ -133,11 +133,20 @@ export default function AdminMessages() {
   }, [privateMessages, groupMessages, users, dbUserId]);
 
   const sendPrivateMessageMutation = useMutation({
-    mutationFn: async ({ receiverId, message }: { receiverId: number; message: string }) => {
+    mutationFn: async ({ receiverId, message, role }: { receiverId: number; message: string; role?: string }) => {
+      // Determine messageType based on recipient role
+      let messageType = 'direct_message';
+      if (role === 'team_leader') {
+        messageType = 'admin_to_team_leader';
+      } else if (role === 'company_member') {
+        messageType = 'admin_to_employee';
+      }
+
       return await apiRequest('/api/messages', 'POST', {
         senderId: dbUserId,
         receiverId,
         message,
+        messageType,
         readStatus: false,
       });
     },
@@ -181,6 +190,7 @@ export default function AdminMessages() {
       sendPrivateMessageMutation.mutate({
         receiverId: selectedConversation.userId,
         message: messageInput,
+        role: selectedConversation.userRole,
       });
     } else if (selectedConversation.type === 'group') {
       sendGroupMessageMutation.mutate({

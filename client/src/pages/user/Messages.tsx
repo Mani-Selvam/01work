@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, MessageSquare } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 
@@ -106,15 +106,25 @@ export default function Messages() {
     },
   });
 
-  const conversationMessages = teamLeaderInfo
-    ? allMessages
-        .filter(
-          msg => ((msg.senderId === teamLeaderInfo.id && msg.receiverId === dbUserId) ||
-                 (msg.senderId === dbUserId && msg.receiverId === teamLeaderInfo.id)) &&
-                 (msg.messageType === 'team_leader_to_employee' || msg.messageType === 'employee_to_team_leader')
-        )
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    : [];
+  // Get messages from team leader OR admin
+  const conversationMessages = useMemo(() => {
+    if (!teamLeaderInfo && !allMessages.some(m => m.messageType === 'admin_to_employee' && m.receiverId === dbUserId)) {
+      return [];
+    }
+
+    return allMessages
+      .filter(msg => {
+        // Team leader conversation
+        const isTeamLeaderMsg = (msg.senderId === teamLeaderInfo?.id || msg.receiverId === teamLeaderInfo?.id) &&
+                                (msg.messageType === 'team_leader_to_employee' || msg.messageType === 'employee_to_team_leader');
+        
+        // Admin message
+        const isAdminMsg = msg.messageType === 'admin_to_employee' && msg.receiverId === dbUserId;
+        
+        return isTeamLeaderMsg || isAdminMsg;
+      })
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [teamLeaderInfo, allMessages, dbUserId]);
 
   const unreadCount = conversationMessages.filter(
     msg => msg.senderId === teamLeaderInfo?.id && !msg.readStatus
@@ -144,26 +154,28 @@ export default function Messages() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold">Team Leader Messages</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
           {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
         </p>
       </div>
 
       <Card>
-        {teamLeaderInfo ? (
+        {teamLeaderInfo || conversationMessages.length > 0 ? (
           <>
             <CardHeader className="border-b">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarImage src={teamLeaderInfo.photoURL} />
+                  <AvatarImage src={teamLeaderInfo?.photoURL} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    {getInitials(teamLeaderInfo.displayName)}
+                    {teamLeaderInfo ? getInitials(teamLeaderInfo.displayName) : 'TL'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <CardTitle className="text-base">{teamLeaderInfo.displayName}</CardTitle>
-                  <p className="text-sm text-muted-foreground">Your Team Leader</p>
+                  <CardTitle className="text-base">{teamLeaderInfo?.displayName || 'Team Messages'}</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {teamLeaderInfo ? 'Your Team Leader' : 'Messages from team'}
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -179,58 +191,64 @@ export default function Messages() {
                 ) : (
                   conversationMessages.map((msg) => {
                     const isOwn = msg.senderId === dbUserId;
+                    const isFromAdmin = msg.messageType === 'admin_to_employee';
                     return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                        data-testid={`message-${msg.id}`}
-                      >
+                      <div key={msg.id} data-testid={`message-${msg.id}`}>
+                        {isFromAdmin && (
+                          <p className="text-xs text-muted-foreground mb-1 font-semibold">Admin Message</p>
+                        )}
                         <div
-                          className={`max-w-[70%] ${
-                            isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                          } rounded-md p-3`}
+                          className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                         >
-                          <p className="text-sm">{msg.message}</p>
-                          <p
-                            className={`text-xs mt-1 ${
-                              isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                            }`}
+                          <div
+                            className={`max-w-[70%] ${
+                              isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                            } rounded-md p-3`}
                           >
-                            {new Date(msg.createdAt).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </p>
+                            <p className="text-sm">{msg.message}</p>
+                            <p
+                              className={`text-xs mt-1 ${
+                                isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                              }`}
+                            >
+                              {new Date(msg.createdAt).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     );
                   })
                 )}
               </div>
-              <div className="flex gap-2 pt-4 border-t">
-                <Textarea
-                  placeholder="Type your message..."
-                  className="resize-none"
-                  rows={2}
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  data-testid="input-message"
-                />
-                <Button
-                  size="icon"
-                  onClick={handleSendMessage}
-                  disabled={!messageText.trim() || sendMessageMutation.isPending}
-                  data-testid="button-send-message"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
+              {teamLeaderInfo && (
+                <div className="flex gap-2 pt-4 border-t">
+                  <Textarea
+                    placeholder="Type your message..."
+                    className="resize-none"
+                    rows={2}
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    data-testid="input-message"
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleSendMessage}
+                    disabled={!messageText.trim() || sendMessageMutation.isPending}
+                    data-testid="button-send-message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </>
         ) : (
