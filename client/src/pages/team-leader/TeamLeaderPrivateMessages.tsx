@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +45,6 @@ export default function TeamLeaderPrivateMessages() {
     queryKey: ['/api/users'],
   });
 
-  // Real-time message updates via WebSocket
   useWebSocket((data) => {
     if (data.type === 'NEW_MESSAGE') {
       const messageData = data.data;
@@ -97,7 +95,6 @@ export default function TeamLeaderPrivateMessages() {
   const handleSendReply = () => {
     if (!messageText.trim()) return;
 
-    // Find the admin (sender of the original message)
     const adminMessage = adminMessages.find(msg => msg.id === replyingToAdminId);
     if (!adminMessage) return;
 
@@ -114,13 +111,12 @@ export default function TeamLeaderPrivateMessages() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-32 w-full" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold">Admin Messages</h2>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
@@ -129,7 +125,7 @@ export default function TeamLeaderPrivateMessages() {
       </div>
 
       {/* ADMIN MESSAGES SECTION */}
-      <Card data-testid="card-admin-messages" className="border-l-4 border-l-primary">
+      <Card data-testid="card-admin-messages">
         <CardHeader className="border-b pb-3">
           <div className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
@@ -139,33 +135,30 @@ export default function TeamLeaderPrivateMessages() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="space-y-0 max-h-96 overflow-y-auto">
-            {adminMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4">
-                <Mail className="h-10 w-10 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground text-center">
-                  No admin messages yet. You'll receive important updates here.
-                </p>
-              </div>
-            ) : (
-              adminMessages.map((msg) => {
+        <CardContent className="p-4">
+          {adminMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Mail className="h-10 w-10 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground text-center">
+                No admin messages yet
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {adminMessages.map((msg) => {
                 const sender = getSenderInfo(msg.senderId);
                 return (
                   <div
                     key={msg.id}
-                    className="px-4 py-3 border-b last:border-b-0 hover:bg-accent/50 transition-colors group"
+                    className="p-3 bg-muted rounded-lg border border-border/50 group hover:bg-muted/80 transition-colors"
                     data-testid={`message-admin-${msg.id}`}
                   >
-                    <div className="flex items-start gap-3 justify-between">
+                    <div className="flex items-start gap-2 justify-between">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="text-sm font-semibold">
+                        <div className="flex items-center gap-2 gap-2 mb-1">
+                          <span className="text-xs font-semibold">
                             {sender?.displayName || 'Administrator'}
                           </span>
-                          {!msg.readStatus && (
-                            <Badge variant="default" className="text-xs">New</Badge>
-                          )}
                         </div>
                         <p className="text-sm text-foreground break-words">{msg.message}</p>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -175,7 +168,7 @@ export default function TeamLeaderPrivateMessages() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 h-8 w-8 p-0"
                         onClick={() => handleReplyToAdmin(msg.id)}
                         data-testid={`button-reply-admin-${msg.id}`}
                       >
@@ -184,13 +177,13 @@ export default function TeamLeaderPrivateMessages() {
                     </div>
                   </div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* REPLY TO ADMIN SECTION - Shows when replying */}
+      {/* REPLY TO ADMIN SECTION */}
       {replyingToAdminId && (
         <Card className="border-accent bg-accent/5">
           <CardHeader className="pb-3">
@@ -199,6 +192,7 @@ export default function TeamLeaderPrivateMessages() {
               <Button
                 size="sm"
                 variant="ghost"
+                className="h-6 w-6 p-0"
                 onClick={() => setReplyingToAdminId(null)}
                 data-testid="button-cancel-reply"
               >

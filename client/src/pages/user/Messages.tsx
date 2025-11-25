@@ -66,7 +66,6 @@ export default function Messages() {
     retry: false,
   });
 
-  // Real-time message updates via WebSocket
   useWebSocket((data) => {
     if (data.type === 'NEW_MESSAGE') {
       const messageData = data.data;
@@ -106,7 +105,6 @@ export default function Messages() {
     },
   });
 
-  // Separate admin and team leader messages
   const adminMessages = useMemo(() => {
     return allMessages
       .filter(msg => msg.messageType === 'admin_to_employee' && msg.receiverId === dbUserId)
@@ -159,7 +157,7 @@ export default function Messages() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
@@ -168,32 +166,32 @@ export default function Messages() {
       </div>
 
       {/* ADMIN MESSAGES SECTION */}
-      <Card data-testid="card-admin-messages" className="border-l-4 border-l-primary">
+      <Card data-testid="card-admin-messages">
         <CardHeader className="border-b pb-3">
           <div className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
             <div>
               <CardTitle className="text-base">Admin Messages</CardTitle>
-              <p className="text-xs text-muted-foreground">Announcements & notifications from administration</p>
+              <p className="text-xs text-muted-foreground">Announcements from administration</p>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="space-y-0 max-h-80 overflow-y-auto">
-            {adminMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4">
-                <Mail className="h-10 w-10 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No admin messages yet</p>
-              </div>
-            ) : (
-              adminMessages.map((msg) => (
+        <CardContent className="p-4">
+          {adminMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Mail className="h-10 w-10 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">No admin messages yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-72 overflow-y-auto">
+              {adminMessages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="px-4 py-3 border-b last:border-b-0 hover:bg-accent/50 transition-colors group"
+                  className="p-3 bg-muted rounded-lg border border-border/50 group hover:bg-muted/80 transition-colors"
                   data-testid={`message-admin-${msg.id}`}
                 >
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex-1">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground">{msg.message}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {new Date(msg.createdAt).toLocaleString('en-US', {
@@ -207,7 +205,7 @@ export default function Messages() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 h-8 w-8 p-0"
                       onClick={() => handleReplyToAdmin(msg.id)}
                       data-testid={`button-reply-admin-${msg.id}`}
                     >
@@ -215,13 +213,13 @@ export default function Messages() {
                     </Button>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* REPLY TO ADMIN SECTION - Shows when replying */}
+      {/* REPLY TO ADMIN SECTION */}
       {replyingToAdminId && teamLeaderInfo && (
         <Card className="border-accent bg-accent/5">
           <CardHeader className="pb-3">
@@ -230,6 +228,7 @@ export default function Messages() {
               <Button
                 size="sm"
                 variant="ghost"
+                className="h-6 w-6 p-0"
                 onClick={() => setReplyingToAdminId(null)}
                 data-testid="button-cancel-reply"
               >
@@ -239,7 +238,7 @@ export default function Messages() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Your reply will be sent to: <span className="font-semibold">{teamLeaderInfo.displayName}</span>
+              Sending to: <span className="font-semibold">{teamLeaderInfo.displayName}</span>
             </p>
             <div className="flex gap-2">
               <Textarea
@@ -287,16 +286,14 @@ export default function Messages() {
             </div>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
-              {teamLeaderMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    No messages yet. Start a conversation!
-                  </p>
-                </div>
-              ) : (
-                teamLeaderMessages.map((msg) => {
+            {teamLeaderMessages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <MessageSquare className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No messages yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
+                {teamLeaderMessages.map((msg) => {
                   const isOwn = msg.senderId === dbUserId;
                   return (
                     <div
@@ -307,7 +304,7 @@ export default function Messages() {
                       <div
                         className={`max-w-[70%] ${
                           isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                        } rounded-md p-3`}
+                        } rounded-lg p-3`}
                       >
                         <p className="text-sm">{msg.message}</p>
                         <p
@@ -323,9 +320,9 @@ export default function Messages() {
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
             <div className="flex gap-2 pt-4 border-t">
               <Textarea
                 placeholder="Type your message..."
@@ -351,18 +348,6 @@ export default function Messages() {
                 <Send className="h-4 w-4" />
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {!teamLeaderInfo && adminMessages.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-24">
-            <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Team Leader Assigned</h3>
-            <p className="text-sm text-muted-foreground text-center">
-              You haven't been assigned to a team leader yet.
-            </p>
           </CardContent>
         </Card>
       )}
