@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, MessageSquare, Mail } from "lucide-react";
+import { Send, MessageSquare, Mail, Reply } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/contexts/WebSocketContext";
@@ -31,6 +31,7 @@ export default function Messages() {
   const { dbUserId } = useAuth();
   const { toast } = useToast();
   const [messageText, setMessageText] = useState("");
+  const [replyingToAdminId, setReplyingToAdminId] = useState<number | null>(null);
 
   const { data: allMessages = [], isLoading: loadingMessages } = useQuery<Message[]>({
     queryKey: ['/api/messages'],
@@ -90,6 +91,7 @@ export default function Messages() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
       setMessageText("");
+      setReplyingToAdminId(null);
       toast({
         title: "Success",
         description: "Message sent successfully",
@@ -131,6 +133,19 @@ export default function Messages() {
     });
   };
 
+  const handleReplyToAdmin = (adminMessageId: number) => {
+    setReplyingToAdminId(adminMessageId);
+  };
+
+  const handleSendAdminReply = () => {
+    if (!messageText.trim() || !teamLeaderInfo) return;
+
+    sendMessageMutation.mutate({
+      receiverId: teamLeaderInfo.id,
+      message: messageText.trim(),
+    });
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -153,49 +168,106 @@ export default function Messages() {
       </div>
 
       {/* ADMIN MESSAGES SECTION */}
-      <Card data-testid="card-admin-messages">
-        <CardHeader className="border-b">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Mail className="h-5 w-5 text-primary" />
-            </div>
+      <Card data-testid="card-admin-messages" className="border-l-4 border-l-primary">
+        <CardHeader className="border-b pb-3">
+          <div className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
             <div>
               <CardTitle className="text-base">Admin Messages</CardTitle>
-              <p className="text-sm text-muted-foreground">Announcements & notifications from administration</p>
+              <p className="text-xs text-muted-foreground">Announcements & notifications from administration</p>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-4">
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+        <CardContent className="p-0">
+          <div className="space-y-0 max-h-80 overflow-y-auto">
             {adminMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Mail className="h-12 w-12 text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  No admin messages yet
-                </p>
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <Mail className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No admin messages yet</p>
               </div>
             ) : (
               adminMessages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="p-3 bg-muted rounded-md border border-border/50"
+                  className="px-4 py-3 border-b last:border-b-0 hover:bg-accent/50 transition-colors group"
                   data-testid={`message-admin-${msg.id}`}
                 >
-                  <p className="text-sm text-foreground">{msg.message}</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {new Date(msg.createdAt).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm text-foreground">{msg.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(msg.createdAt).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      onClick={() => handleReplyToAdmin(msg.id)}
+                      data-testid={`button-reply-admin-${msg.id}`}
+                    >
+                      <Reply className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))
             )}
           </div>
         </CardContent>
       </Card>
+
+      {/* REPLY TO ADMIN SECTION - Shows when replying */}
+      {replyingToAdminId && teamLeaderInfo && (
+        <Card className="border-accent bg-accent/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Reply to Admin</CardTitle>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setReplyingToAdminId(null)}
+                data-testid="button-cancel-reply"
+              >
+                ✕
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Your reply will be sent to: <span className="font-semibold">{teamLeaderInfo.displayName}</span>
+            </p>
+            <div className="flex gap-2">
+              <Textarea
+                placeholder="Type your reply..."
+                className="resize-none"
+                rows={2}
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendAdminReply();
+                  }
+                }}
+                data-testid="input-admin-reply"
+              />
+              <Button
+                size="icon"
+                onClick={handleSendAdminReply}
+                disabled={!messageText.trim() || sendMessageMutation.isPending}
+                data-testid="button-send-admin-reply"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* TEAM LEADER MESSAGES SECTION */}
       {teamLeaderInfo && (
@@ -259,20 +331,21 @@ export default function Messages() {
                 placeholder="Type your message..."
                 className="resize-none"
                 rows={2}
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
+                value={!replyingToAdminId ? messageText : ''}
+                onChange={(e) => !replyingToAdminId && setMessageText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === 'Enter' && !e.shiftKey && !replyingToAdminId) {
                     e.preventDefault();
                     handleSendMessage();
                   }
                 }}
                 data-testid="input-message"
+                disabled={replyingToAdminId !== null}
               />
               <Button
                 size="icon"
                 onClick={handleSendMessage}
-                disabled={!messageText.trim() || sendMessageMutation.isPending}
+                disabled={!messageText.trim() || sendMessageMutation.isPending || replyingToAdminId !== null}
                 data-testid="button-send-message"
               >
                 <Send className="h-4 w-4" />
