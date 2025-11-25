@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Send, MessageSquare, Mail, Search } from "lucide-react";
+import { Send, MessageSquare, Search } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/contexts/WebSocketContext";
@@ -19,6 +19,8 @@ interface Message {
   messageType: string;
   readStatus: boolean;
   createdAt: string;
+  senderName?: string;
+  receiverName?: string;
 }
 
 interface User {
@@ -48,23 +50,37 @@ export default function TeamLeaderMessages() {
   const [searchText, setSearchText] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
+  // Fetch all messages
   const { data: allMessages = [], isLoading: loadingMessages } = useQuery<Message[]>({
     queryKey: ['/api/messages'],
     enabled: !!dbUserId,
   });
 
+  // Fetch all users to identify roles
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ['/api/users'],
   });
 
+  // Fetch team members assigned to this team leader
   const { data: teamMembers = [] } = useQuery<User[]>({
     queryKey: [`/api/team-assignments/${dbUserId}/members`],
     enabled: !!dbUserId,
+    retry: false,
   });
 
   useWebSocket((data) => {
     if (data.type === 'NEW_MESSAGE') {
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      const messageData = data.data;
+      if (messageData.senderId === dbUserId || messageData.receiverId === dbUserId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+        
+        if (messageData.receiverId === dbUserId) {
+          toast({
+            title: "New Message",
+            description: `${messageData.senderName}: ${messageData.message.substring(0, 50)}${messageData.message.length > 50 ? '...' : ''}`,
+          });
+        }
+      }
     }
   });
 
@@ -89,7 +105,7 @@ export default function TeamLeaderMessages() {
     },
   });
 
-  // Get admin messages (messages from admin/super-admin)
+  // Get admin messages (from admin to team leader)
   const adminMessages = useMemo(() => {
     return allMessages
       .filter(msg => 
@@ -101,12 +117,13 @@ export default function TeamLeaderMessages() {
 
   // Get team member messages
   const teamMemberMessages = useMemo(() => {
-    const messages = allMessages.filter(msg =>
-      (msg.senderId === dbUserId && msg.receiverId && teamMembers.some(tm => tm.id === msg.receiverId)) ||
-      (msg.receiverId === dbUserId && msg.senderId && teamMembers.some(tm => tm.id === msg.senderId))
-    );
-    return messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  }, [allMessages, teamMembers, dbUserId]);
+    const memberIds = teamMembers.map(m => m.id);
+    return allMessages
+      .filter(msg =>
+        memberIds.includes(msg.senderId) || memberIds.includes(msg.receiverId)
+      )
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [allMessages, teamMembers]);
 
   // Build conversation list
   const conversations: Conversation[] = useMemo(() => {
@@ -115,12 +132,15 @@ export default function TeamLeaderMessages() {
     // Add admin section if there are admin messages
     if (adminMessages.length > 0) {
       const lastAdmin = adminMessages[adminMessages.length - 1];
-      const adminUser = users.find(u => u.id === lastAdmin.senderId && u.role === 'company_admin');
+      const senderOrReceiver = lastAdmin.senderId === dbUserId ? lastAdmin.receiverId : lastAdmin.senderId;
+      const adminUser = users.find(u => u.id === senderOrReceiver && (u.role === 'company_admin' || u.role === 'super_admin'));
+      
       convs.push({
         id: 'admin-all',
         type: 'admin',
+        userId: adminUser?.id,
         userName: adminUser?.displayName || 'Administrator',
-        userRole: 'Admin',
+        userRole: adminUser?.role === 'company_admin' ? 'Admin' : 'Super Admin',
         userPhoto: adminUser?.photoURL,
         lastMessage: lastAdmin.message,
         lastMessageTime: new Date(lastAdmin.createdAt),
@@ -143,6 +163,17 @@ export default function TeamLeaderMessages() {
           lastMessage: msg.message,
           lastMessageTime: new Date(msg.createdAt),
         });
+      } else if (otherUser && memberConvMap.has(otherUserId)) {
+        const existing = memberConvMap.get(otherUserId)!;
+        const msgTime = new Date(msg.createdAt).getTime();
+        const existingTime = (existing.lastMessageTime?.getTime() || 0);
+        if (msgTime > existingTime) {
+          memberConvMap.set(otherUserId, {
+            ...existing,
+            lastMessage: msg.message,
+            lastMessageTime: new Date(msg.createdAt),
+          });
+        }
       }
     });
 
@@ -175,18 +206,17 @@ export default function TeamLeaderMessages() {
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedConversation) return;
 
-    if (selectedConversation.type === 'admin') {
-      const adminUser = users.find(u => adminMessages.some(msg => msg.senderId === u.id && u.role === 'company_admin'));
-      if (adminUser) {
-        sendMessageMutation.mutate({
-          receiverId: adminUser.id,
-          message: messageText.trim(),
-          messageType: 'team_leader_to_admin',
-        });
-      }
-    } else if (selectedConversation.userId) {
+    let receiverId: number | null = null;
+
+    if (selectedConversation.type === 'admin' && selectedConversation.userId) {
+      receiverId = selectedConversation.userId;
+    } else if (selectedConversation.type === 'team_member' && selectedConversation.userId) {
+      receiverId = selectedConversation.userId;
+    }
+
+    if (receiverId) {
       sendMessageMutation.mutate({
-        receiverId: selectedConversation.userId,
+        receiverId,
         message: messageText.trim(),
       });
     }
