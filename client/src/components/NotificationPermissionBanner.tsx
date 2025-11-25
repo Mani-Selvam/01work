@@ -18,7 +18,7 @@ export function NotificationPermissionBanner() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 bg-card border border-border rounded-lg p-4 shadow-lg max-w-sm z-40">
+    <div className="fixed top-4 left-4 right-4 md:bottom-4 md:right-4 md:left-auto md:top-auto bg-card border border-border rounded-lg p-4 shadow-lg max-w-sm z-40">
       <div className="flex items-start gap-3">
         <Bell className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
         <div className="flex-1 min-w-0">
