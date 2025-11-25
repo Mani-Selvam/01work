@@ -1,31 +1,41 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Send } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
-import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/card";
+import { MessageSquare, Send, Users, X, Search } from "lucide-react";
+import { format, isToday, isYesterday } from "date-fns";
 import type { User, Message, GroupMessage } from "@shared/schema";
+
+type ConversationType = "direct" | "group";
+interface Conversation {
+  id: string;
+  type: ConversationType;
+  userId?: number;
+  userName?: string;
+  userRole?: string;
+  lastMessage?: string;
+  lastMessageTime?: Date;
+  unreadCount?: number;
+}
 
 export default function AdminMessages() {
   const { toast } = useToast();
   const { dbUserId } = useAuth();
-  const [privateMessageForm, setPrivateMessageForm] = useState({
-    receiverId: "",
-    message: "",
-  });
-  const [groupMessageForm, setGroupMessageForm] = useState({
-    title: "",
-    message: "",
-  });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [messageInput, setMessageInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ['/api/users'],
@@ -39,62 +49,69 @@ export default function AdminMessages() {
     queryKey: ['/api/group-messages'],
   });
 
-  // Real-time message updates via WebSocket
+  // Real-time updates
   useWebSocket((data) => {
-    // New private message
     if (data.type === 'NEW_MESSAGE') {
-      const messageData = data.data;
-      
-      // Admin should see ALL messages for management purposes
       queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-      
-      // Show toast notification only for received messages
-      if (messageData.receiverId === dbUserId) {
-        toast({
-          title: "New Message",
-          description: `${messageData.senderName}: ${messageData.message.substring(0, 50)}${messageData.message.length > 50 ? '...' : ''}`,
-        });
-      }
     }
-    
-    // New group message/announcement
     if (data.type === 'NEW_GROUP_MESSAGE') {
-      queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
-      
-      // Only show toast if admin didn't send it
-      const messageData = data.data;
-      if (messageData.senderId !== dbUserId) {
-        toast({
-          title: "New Announcement",
-          description: messageData?.title || "A new announcement has been posted",
-        });
-      }
-    }
-    
-    // Reply to group message
-    if (data.type === 'GROUP_MESSAGE_REPLY') {
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/group-messages', data.groupMessageId, 'replies'] 
-      });
-      // Also refresh the main announcements list to update reply counts
       queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
     }
   });
 
+  // Build conversations from messages
+  useEffect(() => {
+    const convMap = new Map<string, Conversation>();
+
+    // Direct message conversations
+    privateMessages.forEach(msg => {
+      const otherUserId = msg.senderId === dbUserId ? msg.receiverId : msg.senderId;
+      const otherUser = users.find(u => u.id === otherUserId);
+      const key = `direct-${Math.min(otherUserId, msg.senderId === dbUserId ? msg.senderId : msg.receiverId)}-${Math.max(otherUserId, msg.senderId === dbUserId ? msg.senderId : msg.receiverId)}`;
+      
+      if (!convMap.has(key) || new Date(msg.createdAt) > (convMap.get(key)?.lastMessageTime || new Date(0))) {
+        convMap.set(key, {
+          id: key,
+          type: "direct",
+          userId: otherUserId,
+          userName: otherUser?.displayName || "Unknown",
+          userRole: otherUser?.role || "",
+          lastMessage: msg.message,
+          lastMessageTime: new Date(msg.createdAt),
+          unreadCount: msg.readStatus ? 0 : (convMap.get(key)?.unreadCount || 0) + 1,
+        });
+      }
+    });
+
+    // Group conversations (always shown as single group chat)
+    if (groupMessages.length > 0) {
+      const lastGroup = groupMessages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      convMap.set('group-all', {
+        id: 'group-all',
+        type: 'group',
+        userName: 'Announcements',
+        lastMessage: lastGroup?.title || lastGroup?.message || 'No messages',
+        lastMessageTime: new Date(lastGroup?.createdAt || Date.now()),
+        unreadCount: 0,
+      });
+    }
+
+    setConversations(Array.from(convMap.values()).sort((a, b) => 
+      (b.lastMessageTime?.getTime() || 0) - (a.lastMessageTime?.getTime() || 0)
+    ));
+  }, [privateMessages, groupMessages, users, dbUserId]);
+
   const sendPrivateMessageMutation = useMutation({
-    mutationFn: async (messageData: typeof privateMessageForm) => {
+    mutationFn: async ({ receiverId, message }: { receiverId: number; message: string }) => {
       return await apiRequest('/api/messages', 'POST', {
         senderId: dbUserId,
-        receiverId: parseInt(messageData.receiverId),
-        message: messageData.message,
+        receiverId,
+        message,
         readStatus: false,
       });
     },
     onSuccess: () => {
-      toast({
-        title: "Message sent successfully",
-      });
-      setPrivateMessageForm({ receiverId: "", message: "" });
+      setMessageInput("");
       queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
     },
     onError: (error) => {
@@ -107,205 +124,238 @@ export default function AdminMessages() {
   });
 
   const sendGroupMessageMutation = useMutation({
-    mutationFn: async (messageData: typeof groupMessageForm) => {
+    mutationFn: async ({ message }: { message: string }) => {
       return await apiRequest('/api/group-messages', 'POST', {
-        title: messageData.title || null,
-        message: messageData.message,
+        message,
+        title: null,
       });
     },
     onSuccess: () => {
-      toast({
-        title: "Announcement sent successfully",
-      });
-      setGroupMessageForm({ title: "", message: "" });
+      setMessageInput("");
       queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
     },
     onError: (error) => {
       toast({
-        title: "Failed to send announcement",
+        title: "Failed to send message",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const getUserNameById = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    return user?.displayName || "Unknown User";
+  const handleSendMessage = () => {
+    if (!messageInput.trim() || !selectedConversation) return;
+
+    if (selectedConversation.type === 'direct' && selectedConversation.userId) {
+      sendPrivateMessageMutation.mutate({
+        receiverId: selectedConversation.userId,
+        message: messageInput,
+      });
+    } else if (selectedConversation.type === 'group') {
+      sendGroupMessageMutation.mutate({
+        message: messageInput,
+      });
+    }
   };
 
+  const getConversationMessages = () => {
+    if (!selectedConversation) return [];
+
+    if (selectedConversation.type === 'direct' && selectedConversation.userId) {
+      return privateMessages.filter(msg => 
+        (msg.senderId === dbUserId && msg.receiverId === selectedConversation.userId) ||
+        (msg.receiverId === dbUserId && msg.senderId === selectedConversation.userId)
+      ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+
+    if (selectedConversation.type === 'group') {
+      return groupMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+
+    return [];
+  };
+
+  const formatTime = (date: Date) => {
+    if (isToday(date)) return format(date, 'HH:mm');
+    if (isYesterday(date)) return 'Yesterday';
+    return format(date, 'MMM dd');
+  };
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.userName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [getConversationMessages()]);
+
+  const messages = getConversationMessages();
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-          <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8" />
-          Communication Center
-        </h2>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          Send messages and announcements
-        </p>
+    <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-100px)] flex flex-col md:flex-row gap-0 md:gap-4 bg-background">
+      {/* Conversations List */}
+      <div className={`w-full md:w-80 border-r border-border flex flex-col ${selectedConversation ? 'hidden md:flex' : ''}`}>
+        <div className="p-4 border-b border-border space-y-3">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <MessageSquare className="h-6 w-6" />
+            Chats
+          </h2>
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search conversations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9"
+              data-testid="input-search-conversations"
+            />
+          </div>
+        </div>
+
+        <ScrollArea className="flex-1">
+          <div className="space-y-1 p-2">
+            {filteredConversations.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No conversations yet
+              </div>
+            ) : (
+              filteredConversations.map((conv) => (
+                <button
+                  key={conv.id}
+                  onClick={() => setSelectedConversation(conv)}
+                  className={`w-full text-left p-3 rounded-lg transition-colors hover:bg-muted ${
+                    selectedConversation?.id === conv.id ? 'bg-primary/10' : ''
+                  }`}
+                  data-testid={`conv-${conv.id}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      <AvatarFallback>
+                        {conv.type === 'group' ? <Users className="h-5 w-5" /> : (conv.userName?.[0] || '?')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium truncate">{conv.userName}</p>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {conv.lastMessageTime && formatTime(conv.lastMessageTime)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </ScrollArea>
       </div>
 
-      <Tabs defaultValue="private" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="private" data-testid="tab-private-messages" className="text-xs sm:text-sm">
-            Private Messages
-          </TabsTrigger>
-          <TabsTrigger value="announcements" data-testid="tab-announcements" className="text-xs sm:text-sm">
-            Announcements
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="private" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base sm:text-lg">Send Private Message</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="message-user" className="text-xs sm:text-sm">Select User</Label>
-                <Select 
-                  value={privateMessageForm.receiverId} 
-                  onValueChange={(value) => setPrivateMessageForm({ ...privateMessageForm, receiverId: value })}
-                >
-                  <SelectTrigger id="message-user" data-testid="select-message-user">
-                    <SelectValue placeholder="Choose a user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.filter(u => u.role === 'company_member' || u.role === 'team_leader').map(user => (
-                      <SelectItem key={user.id} value={user.id.toString()}>
-                        {user.displayName} {user.role === 'team_leader' ? '(Team Leader)' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="private-message" className="text-xs sm:text-sm">Message</Label>
-                <Textarea
-                  id="private-message"
-                  placeholder="Type your message..."
-                  value={privateMessageForm.message}
-                  onChange={(e) => setPrivateMessageForm({ ...privateMessageForm, message: e.target.value })}
-                  data-testid="textarea-private-message"
-                  rows={4}
-                />
-              </div>
-              <Button 
-                onClick={() => sendPrivateMessageMutation.mutate(privateMessageForm)}
-                disabled={!privateMessageForm.receiverId || !privateMessageForm.message || sendPrivateMessageMutation.isPending}
-                data-testid="button-send-private-message"
-                className="w-full gap-2"
+      {/* Chat Area */}
+      {selectedConversation ? (
+        <div className="flex-1 flex flex-col md:flex-col gap-0">
+          {/* Chat Header */}
+          <div className="border-b border-border p-4 flex items-center justify-between bg-background">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedConversation(null)}
+                className="md:hidden"
+                data-testid="button-back-to-conversations"
               >
-                <Send className="h-4 w-4" />
-                {sendPrivateMessageMutation.isPending ? "Sending..." : "Send Message"}
+                <X className="h-4 w-4" />
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base sm:text-lg">Recent Messages ({privateMessages.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {privateMessages.slice(0, 10).map((msg) => (
-                  <div key={msg.id} className="bg-muted/50 border rounded-lg p-3" data-testid={`message-${msg.id}`}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-xs sm:text-sm font-medium">{getUserNameById(msg.senderId)}</span>
-                          <span className="text-xs text-muted-foreground">→</span>
-                          <span className="text-xs sm:text-sm font-medium">{getUserNameById(msg.receiverId)}</span>
-                        </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground">{msg.message}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
-                        {format(new Date(msg.createdAt), "MMM dd, HH:mm")}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {privateMessages.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
-                    No messages yet
-                  </div>
+              <Avatar className="h-10 w-10">
+                <AvatarFallback>
+                  {selectedConversation.type === 'group' ? <Users className="h-5 w-5" /> : selectedConversation.userName?.[0] || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold">{selectedConversation.userName}</p>
+                {selectedConversation.type === 'direct' && selectedConversation.userRole && (
+                  <Badge variant="outline" className="text-xs mt-1">
+                    {selectedConversation.userRole === 'team_leader' ? 'Team Leader' : 'Team Member'}
+                  </Badge>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </div>
 
-        <TabsContent value="announcements" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base sm:text-lg">Send Announcement</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="announcement-title" className="text-xs sm:text-sm">Title (Optional)</Label>
-                <Input
-                  id="announcement-title"
-                  placeholder="Announcement title..."
-                  value={groupMessageForm.title}
-                  onChange={(e) => setGroupMessageForm({ ...groupMessageForm, title: e.target.value })}
-                  data-testid="input-announcement-title"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="announcement-message" className="text-xs sm:text-sm">Message *</Label>
-                <Textarea
-                  id="announcement-message"
-                  placeholder="Type your announcement..."
-                  value={groupMessageForm.message}
-                  onChange={(e) => setGroupMessageForm({ ...groupMessageForm, message: e.target.value })}
-                  data-testid="textarea-announcement-message"
-                  rows={4}
-                />
-              </div>
-              <Button 
-                onClick={() => sendGroupMessageMutation.mutate(groupMessageForm)}
-                disabled={!groupMessageForm.message || sendGroupMessageMutation.isPending}
-                data-testid="button-send-announcement"
-                className="w-full gap-2"
-              >
-                <Send className="h-4 w-4" />
-                {sendGroupMessageMutation.isPending ? "Sending..." : "Send Announcement"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base sm:text-lg">Recent Announcements ({groupMessages.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {groupMessages.slice(0, 10).map((msg) => (
-                  <div key={msg.id} className="bg-muted/50 border rounded-lg p-3" data-testid={`announcement-${msg.id}`}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        {msg.title && (
-                          <h4 className="font-semibold text-sm sm:text-base mb-1">{msg.title}</h4>
+          {/* Messages */}
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {messages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No messages yet. Start a conversation!
+                </div>
+              ) : (
+                messages.map((msg, idx) => {
+                  const isOwn = 'senderId' in msg && msg.senderId === dbUserId;
+                  return (
+                    <div
+                      key={`${msg.id}-${idx}`}
+                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                      data-testid={`message-${msg.id}`}
+                    >
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          isOwn
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {'title' in msg && msg.title && (
+                          <p className="font-semibold text-sm mb-1">{msg.title}</p>
                         )}
-                        <p className="text-xs sm:text-sm text-muted-foreground">{msg.message}</p>
+                        <p className="text-sm break-words">{msg.message}</p>
+                        <p className={`text-xs mt-1 ${isOwn ? 'opacity-70' : 'opacity-60'}`}>
+                          {format(new Date(msg.createdAt), 'HH:mm')}
+                        </p>
                       </div>
-                      <span className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
-                        {format(new Date(msg.createdAt), "MMM dd, HH:mm")}
-                      </span>
                     </div>
-                  </div>
-                ))}
-                {groupMessages.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
-                    No announcements yet
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+
+          {/* Message Input */}
+          <div className="border-t border-border p-4 bg-background">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Type a message..."
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
+                data-testid="input-message"
+                className="flex-1"
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={
+                  !messageInput.trim() ||
+                  sendPrivateMessageMutation.isPending ||
+                  sendGroupMessageMutation.isPending
+                }
+                size="icon"
+                data-testid="button-send-message"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground">
+          <div className="text-center space-y-4">
+            <MessageSquare className="h-16 w-16 mx-auto opacity-20" />
+            <p>Select a conversation to start messaging</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
