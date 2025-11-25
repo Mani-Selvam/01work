@@ -80,7 +80,10 @@ export default function TeamLeaderPrivateMessages() {
 
   const adminMessages = useMemo(() => {
     return allMessages
-      .filter(msg => msg.receiverId === dbUserId && msg.messageType === 'admin_to_team_leader')
+      .filter(msg => 
+        (msg.receiverId === dbUserId && msg.messageType === 'admin_to_team_leader') ||
+        (msg.senderId === dbUserId && msg.messageType === 'team_leader_to_admin')
+      )
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [allMessages, dbUserId]);
 
@@ -97,6 +100,19 @@ export default function TeamLeaderPrivateMessages() {
   const selectedMessage = selectedMessageId
     ? adminMessages.find(msg => msg.id === selectedMessageId)
     : null;
+
+  // Get conversation thread (all messages between admin and team leader)
+  const conversationThread = useMemo(() => {
+    if (!selectedMessage) return [];
+    
+    const adminUserId = selectedMessage.senderId;
+    const thread = allMessages.filter(msg => 
+      (msg.senderId === adminUserId && msg.receiverId === dbUserId) ||
+      (msg.senderId === dbUserId && msg.receiverId === adminUserId)
+    ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    
+    return thread;
+  }, [selectedMessage, allMessages, dbUserId]);
 
   const handleSendReply = () => {
     if (!messageText.trim() || !selectedMessage) return;
@@ -213,12 +229,37 @@ export default function TeamLeaderPrivateMessages() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 flex items-start">
-                <div className="w-full">
-                  <div className="bg-muted rounded-lg p-4 inline-block max-w-[80%]">
-                    <p className="text-sm">{selectedMessage.message}</p>
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {conversationThread.length === 0 ? (
+                  <div className="text-center text-muted-foreground text-sm">
+                    No messages in this conversation
                   </div>
-                </div>
+                ) : (
+                  conversationThread.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.senderId === dbUserId ? 'justify-end' : 'justify-start'}`}
+                      data-testid={`message-${msg.id}`}
+                    >
+                      <div
+                        className={`rounded-lg p-4 max-w-xs ${
+                          msg.senderId === dbUserId
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <p className="text-sm">{msg.message}</p>
+                        <p className={`text-xs mt-2 ${
+                          msg.senderId === dbUserId
+                            ? 'text-primary-foreground/70'
+                            : 'text-muted-foreground'
+                        }`}>
+                          {format(new Date(msg.createdAt), 'HH:mm')}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="p-4 border-t border-border flex gap-2">

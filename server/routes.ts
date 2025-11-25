@@ -2028,14 +2028,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine message type based on sender and receiver roles
       let messageType = 'team_leader_to_employee';
       
-      if (requestingUser.role === 'company_admin' && receiverUser.role === 'team_leader') {
+      // Super admin sending messages
+      if (requestingUser.role === 'super_admin' && receiverUser.role === 'team_leader') {
+        messageType = 'admin_to_team_leader';
+      } else if (requestingUser.role === 'super_admin' && receiverUser.role === 'company_member') {
+        messageType = 'admin_to_employee';
+      } else if (requestingUser.role === 'super_admin' && receiverUser.role === 'company_admin') {
+        messageType = 'admin_to_admin';
+      }
+      // Company admin sending messages
+      else if (requestingUser.role === 'company_admin' && receiverUser.role === 'team_leader') {
         messageType = 'admin_to_team_leader';
       } else if (requestingUser.role === 'company_admin' && receiverUser.role === 'company_member') {
         messageType = 'admin_to_employee';
-      } else if (requestingUser.role === 'team_leader' && receiverUser.role === 'company_member') {
+      }
+      // Team leader sending messages
+      else if (requestingUser.role === 'team_leader' && receiverUser.role === 'company_member') {
         messageType = 'team_leader_to_employee';
-      } else if (requestingUser.role === 'company_member' && receiverUser.role === 'team_leader') {
+      } else if (requestingUser.role === 'team_leader' && receiverUser.role === 'company_admin') {
+        messageType = 'team_leader_to_admin';
+      }
+      // Employee (company member) sending messages
+      else if (requestingUser.role === 'company_member' && receiverUser.role === 'team_leader') {
         messageType = 'employee_to_team_leader';
+      } else if (requestingUser.role === 'company_member' && receiverUser.role === 'company_admin') {
+        messageType = 'employee_to_admin';
       }
 
       // Authorization: Team leaders can message their team members, employees can reply to their team leader
