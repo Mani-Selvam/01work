@@ -766,3 +766,21 @@ export const insertFollowupSchema = createInsertSchema(followups).omit({
 
 export type InsertFollowup = z.infer<typeof insertFollowupSchema>;
 export type Followup = typeof followups.$inferSelect;
+
+export const deviceTokens = pgTable("device_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  token: text("token").notNull().unique(),
+  deviceType: varchar("device_type", { length: 20 }).notNull().default("web"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDeviceTokenSchema = createInsertSchema(deviceTokens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDeviceToken = z.infer<typeof insertDeviceTokenSchema>;
+export type DeviceToken = typeof deviceTokens.$inferSelect;
