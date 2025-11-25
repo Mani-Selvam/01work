@@ -2055,13 +2055,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         messageType = 'employee_to_admin';
       }
 
-      // Authorization: Team leaders can message their team members, employees can reply to their team leader
+      // Authorization: Team leaders can message their team members and admins, employees can reply to their team leader or admin
       if (requestingUser.role === 'team_leader') {
-        // Team leader sending to employee - check if receiver is in their team
-        const teamMembers = await storage.getTeamMembersByLeader(requestingUser.id);
-        const teamMemberIds = teamMembers.map(m => m.id);
-        if (!teamMemberIds.includes(receiverUser.id)) {
-          return res.status(403).json({ message: "You can only message your team members" });
+        // Team leader can message admins or their team members
+        if (receiverUser.role !== 'company_admin' && receiverUser.role !== 'super_admin') {
+          // Check if receiver is in their team
+          const teamMembers = await storage.getTeamMembersByLeader(requestingUser.id);
+          const teamMemberIds = teamMembers.map(m => m.id);
+          if (!teamMemberIds.includes(receiverUser.id)) {
+            return res.status(403).json({ message: "You can only message your team members or admins" });
+          }
         }
       } else if (requestingUser.role === 'company_member') {
         // Employee replying to team leader - check if sender is their team leader
