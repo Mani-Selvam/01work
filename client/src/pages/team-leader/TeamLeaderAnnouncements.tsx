@@ -148,21 +148,31 @@ function AnnouncementCard({ announcement }: { announcement: GroupMessage }) {
 
 export default function TeamLeaderAnnouncements() {
   const { toast } = useToast();
-  const { lastMessage } = useWebSocket();
 
   const { data: announcements = [], isLoading, refetch } = useQuery<GroupMessage[]>({
     queryKey: ['/api/group-messages'],
   });
 
-  useEffect(() => {
-    if (lastMessage && lastMessage.type === 'NEW_ANNOUNCEMENT') {
-      refetch();
+  // Real-time updates via WebSocket
+  useWebSocket((data) => {
+    // New announcement
+    if (data.type === 'NEW_GROUP_MESSAGE') {
+      queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
       toast({
         title: "New Announcement",
-        description: "A new announcement has been posted",
+        description: data.data?.title || "A new announcement has been posted",
       });
     }
-  }, [lastMessage, refetch, toast]);
+    
+    // Reply to announcement
+    if (data.type === 'GROUP_MESSAGE_REPLY') {
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/group-messages', data.groupMessageId, 'replies'] 
+      });
+      // Also refresh the main announcements list to update reply counts
+      queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
+    }
+  });
 
   const sortedAnnouncements = [...announcements].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

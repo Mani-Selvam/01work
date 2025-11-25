@@ -2506,6 +2506,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedMessage = insertGroupMessageSchema.parse(messageData);
       const message = await storage.createGroupMessage(validatedMessage);
+      
+      // Broadcast new group message via WebSocket
+      const { broadcast } = await import('./index.js');
+      broadcast({
+        type: 'NEW_GROUP_MESSAGE',
+        data: {
+          ...message,
+          senderName: requestingUser.displayName,
+        }
+      });
+      
       res.json(message);
     } catch (error) {
       next(error);

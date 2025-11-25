@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, Send } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import { format } from "date-fns";
 import type { User, Message, GroupMessage } from "@shared/schema";
 
@@ -36,6 +37,48 @@ export default function AdminMessages() {
 
   const { data: groupMessages = [] } = useQuery<GroupMessage[]>({
     queryKey: ['/api/group-messages'],
+  });
+
+  // Real-time message updates via WebSocket
+  useWebSocket((data) => {
+    // New private message
+    if (data.type === 'NEW_MESSAGE') {
+      const messageData = data.data;
+      
+      // Admin should see ALL messages for management purposes
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      
+      // Show toast notification only for received messages
+      if (messageData.receiverId === dbUserId) {
+        toast({
+          title: "New Message",
+          description: `${messageData.senderName}: ${messageData.message.substring(0, 50)}${messageData.message.length > 50 ? '...' : ''}`,
+        });
+      }
+    }
+    
+    // New group message/announcement
+    if (data.type === 'NEW_GROUP_MESSAGE') {
+      queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
+      
+      // Only show toast if admin didn't send it
+      const messageData = data.data;
+      if (messageData.senderId !== dbUserId) {
+        toast({
+          title: "New Announcement",
+          description: messageData?.title || "A new announcement has been posted",
+        });
+      }
+    }
+    
+    // Reply to group message
+    if (data.type === 'GROUP_MESSAGE_REPLY') {
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/group-messages', data.groupMessageId, 'replies'] 
+      });
+      // Also refresh the main announcements list to update reply counts
+      queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
+    }
   });
 
   const sendPrivateMessageMutation = useMutation({

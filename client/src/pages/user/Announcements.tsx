@@ -209,8 +209,9 @@ function AnnouncementCard({ announcement }: { announcement: GroupMessage }) {
 
 export default function Announcements() {
   const { dbUserId } = useAuth();
+  const { toast } = useToast();
 
-  const { data: announcements = [], isLoading: loadingAnnouncements } = useQuery<GroupMessage[]>({
+  const { data: announcements = [], isLoading: loadingAnnouncements, refetch: refetchAnnouncements } = useQuery<GroupMessage[]>({
     queryKey: ['/api/group-messages'],
     queryFn: async () => {
       const user = localStorage.getItem('user');
@@ -226,7 +227,7 @@ export default function Announcements() {
     },
   });
 
-  const { data: allMessages = [], isLoading: loadingMessages } = useQuery<Message[]>({
+  const { data: allMessages = [], isLoading: loadingMessages, refetch: refetchMessages } = useQuery<Message[]>({
     queryKey: ['/api/messages'],
     enabled: !!dbUserId,
   });
@@ -247,11 +248,37 @@ export default function Announcements() {
     return users.find(u => u.id === senderId);
   };
 
+  // Real-time updates via WebSocket
   useWebSocket((data) => {
+    // New group message/announcement
+    if (data.type === 'NEW_GROUP_MESSAGE') {
+      queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
+      toast({
+        title: "New Announcement",
+        description: data.data?.title || "A new announcement has been posted",
+      });
+    }
+    
+    // New message (from admin or team leader)
+    if (data.type === 'NEW_MESSAGE') {
+      const messageData = data.data;
+      // Refresh if employee receives any message
+      if (messageData.receiverId === dbUserId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+        toast({
+          title: "New Message",
+          description: `${messageData.senderName}: ${messageData.message.substring(0, 50)}${messageData.message.length > 50 ? '...' : ''}`,
+        });
+      }
+    }
+    
+    // Reply to group message
     if (data.type === 'GROUP_MESSAGE_REPLY') {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/group-messages', data.groupMessageId, 'replies'] 
       });
+      // Also refresh the main announcements list to update reply counts
+      queryClient.invalidateQueries({ queryKey: ['/api/group-messages'] });
     }
   });
 

@@ -31,9 +31,8 @@ export default function Messages() {
   const { dbUserId } = useAuth();
   const { toast } = useToast();
   const [messageText, setMessageText] = useState("");
-  const { lastMessage } = useWebSocket();
 
-  const { data: allMessages = [], isLoading: loadingMessages, refetch: refetchMessages } = useQuery<Message[]>({
+  const { data: allMessages = [], isLoading: loadingMessages } = useQuery<Message[]>({
     queryKey: ['/api/messages'],
     enabled: !!dbUserId,
   });
@@ -68,12 +67,13 @@ export default function Messages() {
     retry: false,
   });
 
-  useEffect(() => {
-    if (lastMessage && lastMessage.type === 'NEW_MESSAGE') {
-      const messageData = lastMessage.data;
+  // Real-time message updates via WebSocket
+  useWebSocket((data) => {
+    if (data.type === 'NEW_MESSAGE') {
+      const messageData = data.data;
       
       if (messageData.senderId === dbUserId || messageData.receiverId === dbUserId) {
-        refetchMessages();
+        queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
         
         if (messageData.receiverId === dbUserId) {
           toast({
@@ -83,7 +83,7 @@ export default function Messages() {
         }
       }
     }
-  }, [lastMessage, dbUserId, refetchMessages, toast]);
+  });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { receiverId: number; message: string }) => {
