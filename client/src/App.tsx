@@ -59,8 +59,7 @@ import TeamCorrectionRequests from "@/pages/team-leader/TeamCorrectionRequests";
 import TeamLeaderAttendance from "@/pages/team-leader/TeamLeaderAttendance";
 import TeamAttendanceMonitor from "@/pages/team-leader/TeamAttendanceMonitor";
 import TeamAttendanceReports from "@/pages/team-leader/TeamAttendanceReports";
-import TeamMessages from "@/pages/team-leader/TeamMessages";
-import TeamLeaderPrivateMessages from "@/pages/team-leader/TeamLeaderPrivateMessages";
+import TeamLeaderMessages from "@/pages/team-leader/TeamLeaderMessages";
 import TeamLeaderAnnouncements from "@/pages/team-leader/TeamLeaderAnnouncements";
 import TeamRatings from "@/pages/team-leader/TeamRatings";
 import TeamFeedback from "@/pages/team-leader/TeamFeedback";
@@ -291,14 +290,11 @@ function Router() {
       <Route path="/team-leader/attendance-reports">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamAttendanceReports /></TeamLeaderLayout>} allowedRole="team_leader" />}
       </Route>
-      <Route path="/team-leader/private-messages">
-        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderPrivateMessages /></TeamLeaderLayout>} allowedRole="team_leader" />}
+      <Route path="/team-leader/messages">
+        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderMessages /></TeamLeaderLayout>} allowedRole="team_leader" />}
       </Route>
       <Route path="/team-leader/announcements">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderAnnouncements /></TeamLeaderLayout>} allowedRole="team_leader" />}
-      </Route>
-      <Route path="/team-leader/messages">
-        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamMessages /></TeamLeaderLayout>} allowedRole="team_leader" />}
       </Route>
       <Route path="/team-leader/ratings">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamRatings /></TeamLeaderLayout>} allowedRole="team_leader" />}

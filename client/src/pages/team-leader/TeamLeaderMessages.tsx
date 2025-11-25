@@ -1,0 +1,364 @@
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Send, MessageSquare, Mail, Search } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/contexts/WebSocketContext";
+import { format } from "date-fns";
+
+interface Message {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  message: string;
+  messageType: string;
+  readStatus: boolean;
+  createdAt: string;
+}
+
+interface User {
+  id: number;
+  displayName: string;
+  email: string;
+  photoURL?: string;
+  role: string;
+}
+
+interface Conversation {
+  id: string;
+  type: 'admin' | 'team_member';
+  userId?: number;
+  userName: string;
+  userRole?: string;
+  userPhoto?: string;
+  lastMessage: string;
+  lastMessageTime?: Date;
+}
+
+export default function TeamLeaderMessages() {
+  const { dbUserId } = useAuth();
+  const { toast } = useToast();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messageText, setMessageText] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+
+  const { data: allMessages = [], isLoading: loadingMessages } = useQuery<Message[]>({
+    queryKey: ['/api/messages'],
+    enabled: !!dbUserId,
+  });
+
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ['/api/users'],
+  });
+
+  const { data: teamMembers = [] } = useQuery<User[]>({
+    queryKey: [`/api/team-assignments/${dbUserId}/members`],
+    enabled: !!dbUserId,
+  });
+
+  useWebSocket((data) => {
+    if (data.type === 'NEW_MESSAGE') {
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+    }
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (data: { receiverId: number; message: string; messageType?: string }) => {
+      return await apiRequest('/api/messages', 'POST', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      setMessageText("");
+      toast({
+        title: "Success",
+        description: "Message sent successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Get admin messages (messages from admin/super-admin)
+  const adminMessages = useMemo(() => {
+    return allMessages
+      .filter(msg => 
+        (msg.receiverId === dbUserId && msg.messageType === 'admin_to_team_leader') ||
+        (msg.senderId === dbUserId && msg.messageType === 'team_leader_to_admin')
+      )
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [allMessages, dbUserId]);
+
+  // Get team member messages
+  const teamMemberMessages = useMemo(() => {
+    const messages = allMessages.filter(msg =>
+      (msg.senderId === dbUserId && msg.receiverId && teamMembers.some(tm => tm.id === msg.receiverId)) ||
+      (msg.receiverId === dbUserId && msg.senderId && teamMembers.some(tm => tm.id === msg.senderId))
+    );
+    return messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [allMessages, teamMembers, dbUserId]);
+
+  // Build conversation list
+  const conversations: Conversation[] = useMemo(() => {
+    const convs: Conversation[] = [];
+
+    // Add admin section if there are admin messages
+    if (adminMessages.length > 0) {
+      const lastAdmin = adminMessages[adminMessages.length - 1];
+      const adminUser = users.find(u => u.id === lastAdmin.senderId && u.role === 'company_admin');
+      convs.push({
+        id: 'admin-all',
+        type: 'admin',
+        userName: adminUser?.displayName || 'Administrator',
+        userRole: 'Admin',
+        userPhoto: adminUser?.photoURL,
+        lastMessage: lastAdmin.message,
+        lastMessageTime: new Date(lastAdmin.createdAt),
+      });
+    }
+
+    // Add team member conversations
+    const memberConvMap = new Map<number, Conversation>();
+    teamMemberMessages.forEach(msg => {
+      const otherUserId = msg.senderId === dbUserId ? msg.receiverId : msg.senderId;
+      const otherUser = teamMembers.find(tm => tm.id === otherUserId);
+      
+      if (otherUser && !memberConvMap.has(otherUserId)) {
+        memberConvMap.set(otherUserId, {
+          id: `team-member-${otherUserId}`,
+          type: 'team_member',
+          userId: otherUserId,
+          userName: otherUser.displayName,
+          userPhoto: otherUser.photoURL,
+          lastMessage: msg.message,
+          lastMessageTime: new Date(msg.createdAt),
+        });
+      }
+    });
+
+    convs.push(...Array.from(memberConvMap.values()).sort((a, b) => 
+      (b.lastMessageTime?.getTime() || 0) - (a.lastMessageTime?.getTime() || 0)
+    ));
+
+    return convs;
+  }, [adminMessages, teamMemberMessages, teamMembers, users, dbUserId]);
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.userName.toLowerCase().includes(searchText.toLowerCase()) ||
+    conv.lastMessage.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const getConversationMessages = () => {
+    if (!selectedConversation) return [];
+    
+    if (selectedConversation.type === 'admin') {
+      return adminMessages;
+    } else if (selectedConversation.userId) {
+      return teamMemberMessages.filter(msg =>
+        (msg.senderId === selectedConversation.userId && msg.receiverId === dbUserId) ||
+        (msg.senderId === dbUserId && msg.receiverId === selectedConversation.userId)
+      );
+    }
+    return [];
+  };
+
+  const handleSendMessage = () => {
+    if (!messageText.trim() || !selectedConversation) return;
+
+    if (selectedConversation.type === 'admin') {
+      const adminUser = users.find(u => adminMessages.some(msg => msg.senderId === u.id && u.role === 'company_admin'));
+      if (adminUser) {
+        sendMessageMutation.mutate({
+          receiverId: adminUser.id,
+          message: messageText.trim(),
+          messageType: 'team_leader_to_admin',
+        });
+      }
+    } else if (selectedConversation.userId) {
+      sendMessageMutation.mutate({
+        receiverId: selectedConversation.userId,
+        message: messageText.trim(),
+      });
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const conversationMessages = getConversationMessages();
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversationMessages]);
+
+  if (loadingMessages) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
+      </div>
+
+      <div className="flex gap-4 h-[600px] bg-background rounded-lg border border-border overflow-hidden">
+        {/* LEFT SIDEBAR - Conversations List */}
+        <div className="w-72 border-r border-border flex flex-col">
+          <div className="p-4 border-b border-border space-y-3">
+            <h3 className="font-semibold text-sm">Messages</h3>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search conversations..."
+                className="pl-9 h-9"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                data-testid="input-search-messages"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-1 p-2">
+            {filteredConversations.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <p className="text-sm">No conversations</p>
+              </div>
+            ) : (
+              filteredConversations.map((conv) => (
+                <button
+                  key={conv.id}
+                  onClick={() => setSelectedConversation(conv)}
+                  className={`w-full p-3 rounded-lg text-left transition-colors ${
+                    selectedConversation?.id === conv.id
+                      ? 'bg-primary/10 border border-primary'
+                      : 'hover:bg-accent'
+                  }`}
+                  data-testid={`button-conversation-${conv.id}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={conv.userPhoto} />
+                      <AvatarFallback>{getInitials(conv.userName)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <p className="font-medium text-sm">{conv.userName}</p>
+                        {conv.userRole && (
+                          <span className="text-xs text-muted-foreground">({conv.userRole})</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-1">
+                        {conv.lastMessage}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT SIDE - Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {selectedConversation ? (
+            <>
+              <div className="p-4 border-b border-border flex items-center gap-3">
+                <Avatar>
+                  <AvatarImage src={selectedConversation.userPhoto} />
+                  <AvatarFallback>{getInitials(selectedConversation.userName)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold">{selectedConversation.userName}</h3>
+                  {selectedConversation.userRole && (
+                    <p className="text-xs text-muted-foreground">{selectedConversation.userRole}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {conversationMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <p className="text-sm">No messages yet. Start a conversation!</p>
+                  </div>
+                ) : (
+                  conversationMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.senderId === dbUserId ? 'justify-end' : 'justify-start'}`}
+                      data-testid={`message-${msg.id}`}
+                    >
+                      <div
+                        className={`rounded-lg p-3 max-w-xs ${
+                          msg.senderId === dbUserId
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <p className="text-sm">{msg.message}</p>
+                        <p className={`text-xs mt-2 ${
+                          msg.senderId === dbUserId
+                            ? 'text-primary-foreground/70'
+                            : 'text-muted-foreground'
+                        }`}>
+                          {format(new Date(msg.createdAt), 'HH:mm')}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div className="p-4 border-t border-border flex gap-2">
+                <Textarea
+                  placeholder="Type a message..."
+                  className="resize-none"
+                  rows={2}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  data-testid="input-message"
+                />
+                <Button
+                  size="icon"
+                  onClick={handleSendMessage}
+                  disabled={!messageText.trim() || sendMessageMutation.isPending}
+                  data-testid="button-send-message"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">Select a conversation to start messaging</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
