@@ -8,13 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, ListTodo, UserCheck, MoreVertical, Edit, Trash2, Undo2 } from "lucide-react";
+import { Plus, ListTodo, UserCheck, MoreVertical, Edit, Trash2, Undo2, Eye } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import TaskDetailsModal from "@/components/TaskDetailsModal";
 import type { Task, User } from "@shared/schema";
 
 export default function AdminTasks() {
@@ -29,6 +30,20 @@ export default function AdminTasks() {
     priority: "medium",
     deadline: "",
   });
+  const [taskDetailsOpen, setTaskDetailsOpen] = useState(false);
+  const [selectedTaskForDetails, setSelectedTaskForDetails] = useState<Task | null>(null);
+  const [taskDetailsData, setTaskDetailsData] = useState<any>(null);
+
+  const handleViewTaskDetails = async (task: Task) => {
+    setSelectedTaskForDetails(task);
+    try {
+      const response = await apiRequest(`/api/tasks/${task.id}/details`, 'GET');
+      setTaskDetailsData(response);
+      setTaskDetailsOpen(true);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load task details", variant: "destructive" });
+    }
+  };
 
   const safeConvertToISO = (dateValue: string | null | undefined): string | null => {
     if (!dateValue) return null;

@@ -13,16 +13,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import MetricCard from "@/components/MetricCard";
-import { Users, FileText, CheckCircle, FolderOpen, Plus, MessageSquare, Building2, DollarSign, CreditCard, Edit, Trash2, Eye } from "lucide-react";
+import { Users, FileText, CheckCircle, FolderOpen, Plus, MessageSquare, Building2, DollarSign, CreditCard, Edit, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTaskUpdates } from "@/hooks/useTaskUpdates";
-import TaskDetailsModal from "@/components/TaskDetailsModal";
 import { useState } from "react";
-import type { SlotPricing, CompanyPayment, Company, Task } from "@shared/schema";
+import type { SlotPricing, CompanyPayment, Company } from "@shared/schema";
 
 interface CompanyData {
   id: number;
@@ -42,9 +41,6 @@ export default function Dashboard() {
   const [editingPricing, setEditingPricing] = useState<{ slotType: string; price: string } | null>(null);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [taskDetailsOpen, setTaskDetailsOpen] = useState(false);
-  const [selectedTaskForDetails, setSelectedTaskForDetails] = useState<Task | null>(null);
-  const [taskDetailsData, setTaskDetailsData] = useState<any>(null);
 
   const isSuperAdmin = userRole === "super_admin";
 
@@ -78,22 +74,6 @@ export default function Dashboard() {
     queryKey: ['/api/company-payments'],
     enabled: isSuperAdmin,
   });
-
-  const { data: allTasks } = useQuery<Task[]>({
-    queryKey: ['/api/tasks'],
-    enabled: !!companyId && !!dbUserId && !isSuperAdmin,
-  });
-
-  const handleViewTaskDetails = async (task: Task) => {
-    setSelectedTaskForDetails(task);
-    try {
-      const response = await apiRequest(`/api/tasks/${task.id}/details`, 'GET');
-      setTaskDetailsData(response);
-      setTaskDetailsOpen(true);
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to load task details", variant: "destructive" });
-    }
-  };
 
   const updatePricingMutation = useMutation({
     mutationFn: async (data: { slotType: string; pricePerSlot: number; currency: string }) => {
@@ -416,17 +396,6 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Task Details Modal */}
-      {selectedTaskForDetails && (
-        <TaskDetailsModal
-          open={taskDetailsOpen}
-          onOpenChange={setTaskDetailsOpen}
-          task={selectedTaskForDetails}
-          timeLogs={taskDetailsData?.timeLogs}
-          returnCount={taskDetailsData?.returnCount || 0}
-        />
-      )}
-
       {/* Metrics - Company Admin Only */}
       {!isSuperAdmin && (
         <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
@@ -459,65 +428,6 @@ export default function Dashboard() {
             data-testid="metric-completed-tasks"
           />
         </div>
-      )}
-
-      {/* Task Management - Company Admin Only */}
-      {!isSuperAdmin && allTasks && allTasks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Tasks Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {allTasks.slice(0, 10).map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition"
-                  data-testid={`task-row-${task.id}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{task.title}</p>
-                    <div className="flex gap-2 mt-1">
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                        task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                        'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                      }`}>
-                        {task.priority}
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        task.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                        task.status === 'pending' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' :
-                        'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-                      }`}>
-                        {task.status}
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleViewTaskDetails(task)}
-                    data-testid={`button-view-details-${task.id}`}
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span className="ml-1">Details</span>
-                  </Button>
-                </div>
-              ))}
-              {allTasks.length > 10 && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setLocation("/tasks")}
-                  data-testid="button-view-all-tasks"
-                >
-                  View All {allTasks.length} Tasks
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       {/* Quick Actions - Company Admin Only */}
