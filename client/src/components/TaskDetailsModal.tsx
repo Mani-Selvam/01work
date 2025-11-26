@@ -15,6 +15,10 @@ interface TaskDetailsModalProps {
     newTimeSeconds: number;
   } | null;
   returnCount: number;
+  reworkHistory?: Array<{
+    date: string;
+    message: string;
+  }>;
 }
 
 export default function TaskDetailsModal({
@@ -23,6 +27,7 @@ export default function TaskDetailsModal({
   task,
   timeLogs,
   returnCount,
+  reworkHistory = [],
 }: TaskDetailsModalProps) {
   if (!task) return null;
 
@@ -119,13 +124,27 @@ export default function TaskDetailsModal({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {returnCount > 0 ? (
-                <div className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-950/20 rounded">
-                  <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm">Returned {returnCount} time{returnCount > 1 ? "s" : ""}</p>
-                    <p className="text-xs text-secondary-foreground">Task was sent back for rework</p>
-                  </div>
+              {reworkHistory && reworkHistory.length > 0 ? (
+                <div className="space-y-2">
+                  {reworkHistory.map((rework, index) => {
+                    const reworkDate = new Date(rework.date);
+                    return (
+                      <div key={index} className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-900/50">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">Return to Pending</p>
+                            <p className="text-xs text-secondary-foreground mt-1">
+                              {format(reworkDate, "MMM dd, yyyy")} at {format(reworkDate, "hh:mm a")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <p className="text-xs text-secondary-foreground mt-3">
+                    Task returned {reworkHistory.length} time{reworkHistory.length > 1 ? "s" : ""}
+                  </p>
                 </div>
               ) : (
                 <p className="text-sm text-secondary-foreground">No rework requests</p>

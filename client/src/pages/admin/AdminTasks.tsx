@@ -329,6 +329,7 @@ export default function AdminTasks() {
           task={selectedTaskForDetails}
           timeLogs={taskDetailsData?.timeLogs}
           returnCount={taskDetailsData?.returnCount || 0}
+          reworkHistory={taskDetailsData?.reworkHistory}
         />
       )}
 

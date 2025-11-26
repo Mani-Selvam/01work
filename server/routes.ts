@@ -1798,24 +1798,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get time logs for the user the task is assigned to
       const timeLogs = await storage.getTaskTimeLogs(parseInt(req.params.id), task.assignedTo);
-      const taskTimeLog = timeLogs.length > 0 ? timeLogs[0] : null;
       
-      // Count how many times task was returned (status changed from completed to pending/returned)
-      // For now, we'll get this from message history
+      // Aggregate all time logs for this task
+      let totalSeconds = 0;
+      let oldTimeSeconds = 0;
+      let newTimeSeconds = 0;
+      
+      timeLogs.forEach(log => {
+        if (log.totalSeconds) {
+          totalSeconds += log.totalSeconds;
+          if (log.oldTimeSeconds) {
+            oldTimeSeconds += log.oldTimeSeconds;
+          }
+          if (log.newTimeSeconds) {
+            newTimeSeconds += log.newTimeSeconds;
+          }
+        }
+      });
+      
+      // Get rework history with dates from message history
       const messages = await storage.getAllMessages();
-      const returnCount = messages.filter(m => 
-        m.relatedTaskId === parseInt(req.params.id) && 
-        m.message.includes('returned')
-      ).length;
+      const reworkHistory = messages
+        .filter(m => 
+          m.relatedTaskId === parseInt(req.params.id) && 
+          m.message.includes('returned')
+        )
+        .map(m => ({
+          date: m.createdAt,
+          message: m.message,
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       res.json({
         task,
-        timeLogs: taskTimeLog ? {
-          totalSeconds: taskTimeLog.totalSeconds || 0,
-          oldTimeSeconds: taskTimeLog.oldTimeSeconds || 0,
-          newTimeSeconds: taskTimeLog.newTimeSeconds || 0,
+        timeLogs: totalSeconds > 0 ? {
+          totalSeconds,
+          oldTimeSeconds,
+          newTimeSeconds,
         } : null,
-        returnCount,
+        reworkHistory,
+        returnCount: reworkHistory.length,
       });
     } catch (error) {
       next(error);
