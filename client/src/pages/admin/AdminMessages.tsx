@@ -374,7 +374,7 @@ export default function AdminMessages() {
           </ScrollArea>
 
           {/* Message Input */}
-          <div className="border-t border-border p-3 sm:p-4 bg-background">
+          <div className="flex-shrink-0 border-t border-border p-3 sm:p-4 bg-background">
             <div className="flex gap-2">
               <TextareaComponent
                 placeholder="Type a message..."

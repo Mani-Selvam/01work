@@ -379,7 +379,7 @@ export default function TeamLeaderMessages() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="p-3 sm:p-4 border-t border-border flex gap-2">
+              <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border flex gap-2 bg-background">
                 <Textarea
                   placeholder="Type a message..."
                   className="resize-none text-sm"

@@ -349,7 +349,7 @@ export default function Messages() {
               </div>
 
               {selectedConversation.type === 'team_leader' && (
-                <div className="p-3 sm:p-4 border-t border-border flex gap-2">
+                <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border flex gap-2 bg-background">
                   <Textarea
                     placeholder="Type a message..."
                     className="resize-none text-sm"
@@ -376,7 +376,7 @@ export default function Messages() {
               )}
 
               {selectedConversation.type === 'admin' && (
-                <div className="p-3 sm:p-4 border-t border-border bg-muted/50 text-center">
+                <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border bg-muted/50 text-center">
                   <p className="text-xs text-muted-foreground">
                     Admin messages are read-only
                   </p>
