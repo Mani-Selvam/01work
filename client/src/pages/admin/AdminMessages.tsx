@@ -382,8 +382,8 @@ export default function AdminMessages() {
             </div>
 
             {/* Message Input - Fixed */}
-            <div className="flex-shrink-0 border-t border-border p-3 sm:p-4 bg-background">
-              <div className="flex gap-2">
+            <div className="flex-shrink-0 border-t border-border p-4 bg-background">
+              <div className="flex gap-3 items-end">
               <TextareaComponent
                 placeholder="Type a message..."
                 value={messageInput}
@@ -396,8 +396,8 @@ export default function AdminMessages() {
                 }}
                 disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
                 data-testid="input-message"
-                className="resize-none text-sm"
-                rows={2}
+                className="resize-none text-sm flex-1"
+                rows={3}
               />
               <Button
                 onClick={handleSendMessage}
@@ -406,10 +406,12 @@ export default function AdminMessages() {
                   sendPrivateMessageMutation.isPending ||
                   sendGroupMessageMutation.isPending
                 }
-                size="icon"
+                size="default"
                 data-testid="button-send-message"
+                className="flex-shrink-0 gap-2"
               >
                 <Send className="h-4 w-4" />
+                <span className="hidden sm:inline">Send</span>
               </Button>
               </div>
             </div>

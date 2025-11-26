@@ -351,11 +351,11 @@ export default function Messages() {
               </div>
 
               {selectedConversation.type === 'team_leader' && (
-                <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border flex gap-2 bg-background">
+                <div className="flex-shrink-0 p-4 border-t border-border flex gap-3 items-end bg-background">
                   <Textarea
                     placeholder="Type a message..."
-                    className="resize-none text-sm"
-                    rows={2}
+                    className="resize-none text-sm flex-1"
+                    rows={3}
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => {
@@ -367,12 +367,14 @@ export default function Messages() {
                     data-testid="input-message"
                   />
                   <Button
-                    size="icon"
+                    size="default"
                     onClick={handleSendMessage}
                     disabled={!messageText.trim() || sendMessageMutation.isPending}
                     data-testid="button-send-message"
+                    className="flex-shrink-0 gap-2"
                   >
                     <Send className="h-4 w-4" />
+                    <span className="hidden sm:inline">Send</span>
                   </Button>
                 </div>
               )}
