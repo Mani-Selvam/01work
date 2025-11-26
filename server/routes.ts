@@ -1819,6 +1819,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
+      // Clear any messages that reference this task before deleting
+      const { db } = await import('./storage.js');
+      const { messages } = await import('@shared/schema.js');
+      await db.update(messages)
+        .set({ relatedTaskId: null })
+        .where(eq(messages.relatedTaskId, parseInt(req.params.id)));
+
       await storage.deleteTask(parseInt(req.params.id));
       res.json({ message: "Task deleted" });
     } catch (error) {
