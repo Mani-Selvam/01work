@@ -244,22 +244,33 @@ export default function TeamTasks() {
     try {
       pauseTimer(taskId);
       const timer = timerStates[taskId];
+      console.log('Completing task:', taskId);
+      
       await apiRequest(`/api/tasks/${taskId}/timer/complete`, 'POST', {
         userId: dbUserId,
         date: new Date().toISOString().split('T')[0],
         duration: timer?.elapsed || 0
       });
+      console.log('Timer completed');
+      
       // Use the status endpoint to update task status
+      console.log('Updating status for task:', taskId);
       await apiRequest(`/api/tasks/${taskId}/status`, 'PATCH', {
         status: 'completed'
       });
+      console.log('Status updated');
+      
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      console.log('Queries invalidated');
+      
       const newCompleted = new Set(completedTaskIds);
       newCompleted.add(taskId);
       setCompletedTaskIds(newCompleted);
       toast({ title: "Success", description: "Task completed successfully" });
     } catch (error: any) {
+      console.error('Error completing task:', error);
       toast({ title: "Error", description: error.message || "Failed to complete task", variant: "destructive" });
     }
   };

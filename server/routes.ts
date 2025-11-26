@@ -1756,7 +1756,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { status } = req.body;
+      console.log(`[TaskStatus] Updating task ${parseInt(req.params.id)} to status: ${status}`);
       await storage.updateTaskStatus(parseInt(req.params.id), status);
+      console.log(`[TaskStatus] Broadcasting task update: ${parseInt(req.params.id)} -> ${status}`);
       broadcast({ type: 'task_updated', taskId: parseInt(req.params.id), status });
       res.json({ message: "Task status updated" });
     } catch (error) {
