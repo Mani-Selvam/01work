@@ -237,21 +237,21 @@ export default function AdminMessages() {
   const messages = getConversationMessages();
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden">
-      <div className="flex-shrink-0 p-3 sm:p-4 border-b border-border">
-        <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
+    <div className="h-screen w-full flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 p-3 sm:p-4 lg:p-5 border-b border-border">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold">Messages</h2>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background overflow-hidden min-w-0 w-full">
       {/* Conversations List */}
       <div
         className={`${
           showConversationList ? 'flex' : 'hidden'
-        } md:flex w-full md:w-80 border-b md:border-b-0 md:border-r border-border flex-col min-h-0`}
+        } md:flex w-full md:w-72 lg:w-80 border-b md:border-b-0 md:border-r border-border flex-col min-h-0`}
       >
-        <div className="flex-shrink-0 p-3 sm:p-4 border-b border-border space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
+        <div className="flex-shrink-0 p-3 sm:p-4 lg:p-5 border-b border-border space-y-3">
+          <h2 className="text-base sm:text-lg lg:text-xl font-bold flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
             Chats
           </h2>
           <div className="relative">
@@ -313,7 +313,7 @@ export default function AdminMessages() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <div className="flex flex-col h-full overflow-hidden">
             {/* Chat Header - Fixed at Top */}
-            <div className="flex-shrink-0 sticky top-0 z-50 border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background shadow-md">
+            <div className="flex-shrink-0 sticky top-0 z-50 border-b border-border p-3 sm:p-4 lg:p-5 flex items-center gap-3 bg-background shadow-md">
               <Button
                 variant="ghost"
                 size="icon"
@@ -382,9 +382,9 @@ export default function AdminMessages() {
             </div>
 
             {/* Message Input - Fixed */}
-            <div className="flex-shrink-0 border-t border-border p-4 bg-background">
-              <div className="flex gap-3 items-center flex-nowrap">
-                <div className="flex-1 flex items-center gap-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-3xl px-4 py-3 shadow-sm">
+            <div className="flex-shrink-0 border-t border-border p-3 sm:p-4 lg:p-5 bg-background">
+              <div className="flex gap-2 sm:gap-3 items-center flex-nowrap">
+                <div className="flex-1 flex items-center gap-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-3xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm">
                   <TextareaComponent
                     placeholder="Type a message here"
                     value={messageInput}
@@ -397,7 +397,7 @@ export default function AdminMessages() {
                     }}
                     disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
                     data-testid="input-message"
-                    className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none min-h-5"
+                    className="resize-none text-xs sm:text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none min-h-5"
                     rows={1}
                   />
                 </div>
@@ -410,9 +410,9 @@ export default function AdminMessages() {
                   }
                   size="icon"
                   data-testid="button-send-message"
-                  className="flex-shrink-0 h-10 w-10 rounded-full shadow-md hover:shadow-lg transition-shadow"
+                  className="flex-shrink-0 h-9 sm:h-10 w-9 sm:w-10 rounded-full shadow-md hover:shadow-lg transition-shadow"
                 >
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 sm:h-5 w-4 sm:w-5" />
                 </Button>
               </div>
             </div>
