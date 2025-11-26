@@ -1796,9 +1796,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Get time logs
-      const timeLogs = await storage.getTaskTimeLogs(parseInt(req.params.id));
-      const taskTimeLog = timeLogs.find(log => log.taskId === parseInt(req.params.id));
+      // Get time logs for the user the task is assigned to
+      const timeLogs = await storage.getTaskTimeLogs(parseInt(req.params.id), task.assignedTo);
+      const taskTimeLog = timeLogs.length > 0 ? timeLogs[0] : null;
       
       // Count how many times task was returned (status changed from completed to pending/returned)
       // For now, we'll get this from message history
