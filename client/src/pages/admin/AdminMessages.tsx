@@ -303,79 +303,80 @@ export default function AdminMessages() {
 
       {/* Chat Area */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Chat Header - Fixed at Top */}
-          <div className="sticky top-0 z-50 border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background shadow-md">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setShowConversationList(true);
-                setSelectedConversation(null);
-              }}
-              className="md:hidden"
-              data-testid="button-back-to-conversations"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Avatar className="h-10 w-10 shrink-0">
-              <AvatarImage src={selectedConversation.userPhoto} />
-              <AvatarFallback className="text-xs">
-                {selectedConversation.type === 'group' ? <Users className="h-5 w-5" /> : selectedConversation.userName?.[0] || '?'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm truncate">{selectedConversation.userName}</p>
-              {selectedConversation.type === 'direct' && selectedConversation.userRole && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedConversation.userRole === 'team_leader' ? 'Team Leader' : 'Team Member'}
-                </p>
-              )}
+        <div className="flex-1 flex flex-col min-w-0 h-full">
+          <div className="flex flex-col h-full">
+            {/* Chat Header - Fixed at Top */}
+            <div className="flex-shrink-0 sticky top-0 z-50 border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background shadow-md">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setShowConversationList(true);
+                  setSelectedConversation(null);
+                }}
+                className="md:hidden"
+                data-testid="button-back-to-conversations"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Avatar className="h-10 w-10 shrink-0">
+                <AvatarImage src={selectedConversation.userPhoto} />
+                <AvatarFallback className="text-xs">
+                  {selectedConversation.type === 'group' ? <Users className="h-5 w-5" /> : selectedConversation.userName?.[0] || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{selectedConversation.userName}</p>
+                {selectedConversation.type === 'direct' && selectedConversation.userRole && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedConversation.userRole === 'team_leader' ? 'Team Leader' : 'Team Member'}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Messages */}
-          <ScrollArea className="flex-1 p-3 sm:p-4">
-            <div className="space-y-3 sm:space-y-4">
-              {messages.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  No messages yet. Start a conversation!
-                </div>
-              ) : (
-                messages.map((msg, idx) => {
-                  const isOwn = 'senderId' in msg && msg.senderId === dbUserId;
-                  return (
-                    <div
-                      key={`${msg.id}-${idx}`}
-                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                      data-testid={`message-${msg.id}`}
-                    >
+            {/* Messages - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+              <div className="space-y-3 sm:space-y-4">
+                {messages.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    No messages yet. Start a conversation!
+                  </div>
+                ) : (
+                  messages.map((msg, idx) => {
+                    const isOwn = 'senderId' in msg && msg.senderId === dbUserId;
+                    return (
                       <div
-                        className={`rounded-lg p-2 sm:p-3 max-w-xs sm:max-w-md lg:max-w-lg text-sm break-words ${
-                          isOwn
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
+                        key={`${msg.id}-${idx}`}
+                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                        data-testid={`message-${msg.id}`}
                       >
-                        {'title' in msg && msg.title && (
-                          <p className="font-semibold text-sm mb-1">{msg.title}</p>
-                        )}
-                        <p className="break-words whitespace-pre-wrap">{msg.message}</p>
-                        <p className={`text-xs mt-2 ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground/70'}`}>
-                          {format(new Date(msg.createdAt), 'HH:mm')}
-                        </p>
+                        <div
+                          className={`rounded-lg p-2 sm:p-3 max-w-xs sm:max-w-md lg:max-w-lg text-sm break-words ${
+                            isOwn
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {'title' in msg && msg.title && (
+                            <p className="font-semibold text-sm mb-1">{msg.title}</p>
+                          )}
+                          <p className="break-words whitespace-pre-wrap">{msg.message}</p>
+                          <p className={`text-xs mt-2 ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground/70'}`}>
+                            {format(new Date(msg.createdAt), 'HH:mm')}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
-          </ScrollArea>
 
-          {/* Message Input */}
-          <div className="flex-shrink-0 border-t border-border p-3 sm:p-4 bg-background">
-            <div className="flex gap-2">
+            {/* Message Input - Fixed */}
+            <div className="flex-shrink-0 border-t border-border p-3 sm:p-4 bg-background">
+              <div className="flex gap-2">
               <TextareaComponent
                 placeholder="Type a message..."
                 value={messageInput}
@@ -403,6 +404,7 @@ export default function AdminMessages() {
               >
                 <Send className="h-4 w-4" />
               </Button>
+              </div>
             </div>
           </div>
         </div>

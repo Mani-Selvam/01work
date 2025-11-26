@@ -280,11 +280,12 @@ export default function Messages() {
           </div>
         </div>
 
-        {/* RIGHT SIDE - Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* RIGHT SIDE - Chat Area - Full Height */}
+        <div className="flex-1 flex flex-col min-w-0 h-full">
           {selectedConversation ? (
-            <>
-              <div className="sticky top-0 z-50 p-3 sm:p-4 border-b border-border flex items-center gap-3 bg-background shadow-md">
+            <div className="flex flex-col h-full">
+              {/* Header - Fixed */}
+              <div className="flex-shrink-0 sticky top-0 z-50 p-3 sm:p-4 border-b border-border flex items-center gap-3 bg-background shadow-md">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -309,6 +310,7 @@ export default function Messages() {
                 </div>
               </div>
 
+              {/* Messages - Scrollable */}
               <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
                 {conversationMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -375,6 +377,7 @@ export default function Messages() {
                 </div>
               )}
 
+              {/* Input - Fixed */}
               {selectedConversation.type === 'admin' && (
                 <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border bg-muted/50 text-center">
                   <p className="text-xs text-muted-foreground">
@@ -382,7 +385,7 @@ export default function Messages() {
                   </p>
                 </div>
               )}
-            </>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
