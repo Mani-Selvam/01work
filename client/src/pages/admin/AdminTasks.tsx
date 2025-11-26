@@ -321,6 +321,17 @@ export default function AdminTasks() {
           </DialogContent>
         </Dialog>
 
+      {/* Task Details Modal */}
+      {selectedTaskForDetails && (
+        <TaskDetailsModal
+          open={taskDetailsOpen}
+          onOpenChange={setTaskDetailsOpen}
+          task={selectedTaskForDetails}
+          timeLogs={taskDetailsData?.timeLogs}
+          returnCount={taskDetailsData?.returnCount || 0}
+        />
+      )}
+
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="all" className="flex items-center gap-2">
@@ -392,6 +403,10 @@ export default function AdminTasks() {
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleViewTaskDetails(task)} data-testid={`menu-view-details-${task.id}`}>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        View Details
+                                      </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleEditTask(task)} data-testid={`menu-edit-task-${task.id}`}>
                                         <Edit className="h-4 w-4 mr-2" />
                                         Edit
@@ -489,6 +504,10 @@ export default function AdminTasks() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleViewTaskDetails(task)} data-testid={`menu-view-details-my-task-${task.id}`}>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      View Details
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleEditTask(task)} data-testid={`menu-edit-my-task-${task.id}`}>
                                       <Edit className="h-4 w-4 mr-2" />
                                       Edit
