@@ -92,11 +92,18 @@ export default function TeamTasks() {
             setCompletedTaskIds(prev => {
               const updated = new Set(prev);
               updated.delete(message.taskId);
+              // Update localStorage immediately
+              localStorage.setItem('completedTaskIds', JSON.stringify(Array.from(updated)));
               return updated;
             });
             // Also reset timer for this task
             setTimerStates(prev => ({
               ...prev,
+              [message.taskId]: { isRunning: false, elapsed: 0 }
+            }));
+            // Clear from localStorage
+            localStorage.setItem('taskTimers', JSON.stringify({
+              ...JSON.parse(localStorage.getItem('taskTimers') || '{}'),
               [message.taskId]: { isRunning: false, elapsed: 0 }
             }));
           }

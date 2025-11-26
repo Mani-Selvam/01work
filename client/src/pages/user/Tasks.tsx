@@ -57,11 +57,18 @@ export default function Tasks() {
             setCompletedTaskIds(prev => {
               const updated = new Set(prev);
               updated.delete(message.taskId);
+              // Update localStorage immediately
+              localStorage.setItem('memberCompletedTaskIds', JSON.stringify(Array.from(updated)));
               return updated;
             });
             // Also reset timer for this task
             setTimerStates(prev => ({
               ...prev,
+              [message.taskId]: { isRunning: false, elapsed: 0 }
+            }));
+            // Clear from localStorage
+            localStorage.setItem('memberTaskTimers', JSON.stringify({
+              ...JSON.parse(localStorage.getItem('memberTaskTimers') || '{}'),
               [message.taskId]: { isRunning: false, elapsed: 0 }
             }));
           }
