@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Send, MessageSquare, Search } from "lucide-react";
+import { Send, MessageSquare, Search, ArrowLeft } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/contexts/WebSocketContext";
@@ -49,6 +49,7 @@ export default function TeamLeaderMessages() {
   const [messageText, setMessageText] = useState("");
   const [searchText, setSearchText] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [showConversationList, setShowConversationList] = useState(true);
 
   // Fetch all messages
   const { data: allMessages = [], isLoading: loadingMessages } = useQuery<Message[]>({
@@ -241,21 +242,25 @@ export default function TeamLeaderMessages() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
       </div>
 
-      <div className="flex gap-4 h-[600px] bg-background rounded-lg border border-border overflow-hidden">
+      <div className="flex flex-col md:flex-row gap-3 sm:gap-4 bg-background rounded-lg border border-border overflow-hidden min-h-screen md:min-h-[600px]">
         {/* LEFT SIDEBAR - Conversations List */}
-        <div className="w-72 border-r border-border flex flex-col">
-          <div className="p-4 border-b border-border space-y-3">
+        <div
+          className={`${
+            showConversationList ? 'flex' : 'hidden'
+          } md:flex w-full md:w-72 border-b md:border-b-0 md:border-r border-border flex-col`}
+        >
+          <div className="p-3 sm:p-4 border-b border-border space-y-3">
             <h3 className="font-semibold text-sm">Messages</h3>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search conversations..."
-                className="pl-9 h-9"
+                className="pl-9 h-9 text-sm"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 data-testid="input-search-messages"
@@ -272,8 +277,11 @@ export default function TeamLeaderMessages() {
               filteredConversations.map((conv) => (
                 <button
                   key={conv.id}
-                  onClick={() => setSelectedConversation(conv)}
-                  className={`w-full p-3 rounded-lg text-left transition-colors ${
+                  onClick={() => {
+                    setSelectedConversation(conv);
+                    setShowConversationList(false);
+                  }}
+                  className={`w-full p-2 sm:p-3 rounded-lg text-left transition-colors ${
                     selectedConversation?.id === conv.id
                       ? 'bg-primary/10 border border-primary'
                       : 'hover:bg-accent'
@@ -283,18 +291,23 @@ export default function TeamLeaderMessages() {
                   <div className="flex items-start gap-2">
                     <Avatar className="h-10 w-10 shrink-0">
                       <AvatarImage src={conv.userPhoto} />
-                      <AvatarFallback>{getInitials(conv.userName)}</AvatarFallback>
+                      <AvatarFallback className="text-xs">{getInitials(conv.userName)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
-                        <p className="font-medium text-sm">{conv.userName}</p>
+                        <p className="font-medium text-sm truncate">{conv.userName}</p>
                         {conv.userRole && (
-                          <span className="text-xs text-muted-foreground">({conv.userRole})</span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">({conv.userRole})</span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate mt-1">
                         {conv.lastMessage}
                       </p>
+                      {conv.lastMessageTime && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(conv.lastMessageTime, 'MMM dd, HH:mm')}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -304,23 +317,32 @@ export default function TeamLeaderMessages() {
         </div>
 
         {/* RIGHT SIDE - Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {selectedConversation ? (
             <>
-              <div className="p-4 border-b border-border flex items-center gap-3">
-                <Avatar>
+              <div className="p-3 sm:p-4 border-b border-border flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden"
+                  onClick={() => setShowConversationList(true)}
+                  data-testid="button-back-conversations"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Avatar className="h-10 w-10 shrink-0">
                   <AvatarImage src={selectedConversation.userPhoto} />
-                  <AvatarFallback>{getInitials(selectedConversation.userName)}</AvatarFallback>
+                  <AvatarFallback className="text-xs">{getInitials(selectedConversation.userName)}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <h3 className="font-semibold">{selectedConversation.userName}</h3>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm truncate">{selectedConversation.userName}</h3>
                   {selectedConversation.userRole && (
                     <p className="text-xs text-muted-foreground">{selectedConversation.userRole}</p>
                   )}
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
                 {conversationMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     <p className="text-sm">No messages yet. Start a conversation!</p>
@@ -333,13 +355,13 @@ export default function TeamLeaderMessages() {
                       data-testid={`message-${msg.id}`}
                     >
                       <div
-                        className={`rounded-lg p-3 max-w-xs ${
+                        className={`rounded-lg p-2 sm:p-3 max-w-xs sm:max-w-md lg:max-w-lg text-sm break-words ${
                           msg.senderId === dbUserId
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted'
                         }`}
                       >
-                        <p className="text-sm">{msg.message}</p>
+                        <p className="break-words whitespace-pre-wrap">{msg.message}</p>
                         <p className={`text-xs mt-2 ${
                           msg.senderId === dbUserId
                             ? 'text-primary-foreground/70'
@@ -354,10 +376,10 @@ export default function TeamLeaderMessages() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="p-4 border-t border-border flex gap-2">
+              <div className="p-3 sm:p-4 border-t border-border flex gap-2">
                 <Textarea
                   placeholder="Type a message..."
-                  className="resize-none"
+                  className="resize-none text-sm"
                   rows={2}
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
@@ -383,7 +405,7 @@ export default function TeamLeaderMessages() {
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Select a conversation to start messaging</p>
+                <p className="text-sm text-muted-foreground">Select a conversation to start messaging</p>
               </div>
             </div>
           )}
