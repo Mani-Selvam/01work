@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Send, Users, ArrowLeft, Search, Textarea } from "lucide-react";
+import { MessageSquare, Send, Users, ArrowLeft, Search } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import type { User, Message, GroupMessage } from "@shared/schema";
 import { Textarea as TextareaComponent } from "@/components/ui/textarea";
@@ -304,8 +304,8 @@ export default function AdminMessages() {
       {/* Chat Area */}
       {selectedConversation ? (
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Chat Header */}
-          <div className="flex-shrink-0 border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background shadow-sm">
+          {/* Chat Header - Fixed at Top */}
+          <div className="flex-shrink-0 border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background shadow-md z-50">
             <Button
               variant="ghost"
               size="icon"
@@ -319,6 +319,7 @@ export default function AdminMessages() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Avatar className="h-10 w-10 shrink-0">
+              <AvatarImage src={selectedConversation.userPhoto} />
               <AvatarFallback className="text-xs">
                 {selectedConversation.type === 'group' ? <Users className="h-5 w-5" /> : selectedConversation.userName?.[0] || '?'}
               </AvatarFallback>
@@ -326,9 +327,9 @@ export default function AdminMessages() {
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm truncate">{selectedConversation.userName}</p>
               {selectedConversation.type === 'direct' && selectedConversation.userRole && (
-                <Badge variant="outline" className="text-xs mt-1">
+                <p className="text-xs text-muted-foreground">
                   {selectedConversation.userRole === 'team_leader' ? 'Team Leader' : 'Team Member'}
-                </Badge>
+                </p>
               )}
             </div>
           </div>
