@@ -1683,8 +1683,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (requestingUser.role === 'super_admin') {
         const tasks = await storage.getAllTasks();
         res.json(tasks);
-      } else if (requestingUser.companyId) {
+      } else if (requestingUser.role === 'company_admin') {
+        // Admin sees all tasks in their company
         const tasks = await storage.getTasksByCompanyId(requestingUser.companyId);
+        res.json(tasks);
+      } else if (requestingUser.role === 'team_leader') {
+        // Team leader sees only tasks assigned to their team members
+        const teamMembers = await storage.getTeamMembersByLeader(requestingUser.id);
+        const teamMemberIds = teamMembers.map(m => m.id);
+        const allTasks = await storage.getTasksByCompanyId(requestingUser.companyId);
+        res.json(allTasks.filter(task => teamMemberIds.includes(task.assignedTo)));
+      } else if (requestingUser.role === 'company_member') {
+        // Employee sees only their assigned tasks
+        const tasks = await storage.getTasksByUserId(requestingUser.id);
         res.json(tasks);
       } else {
         res.json([]);
