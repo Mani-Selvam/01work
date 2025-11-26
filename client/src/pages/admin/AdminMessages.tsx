@@ -11,9 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Send, Users, X, Search } from "lucide-react";
+import { MessageSquare, Send, Users, ArrowLeft, Search, Textarea } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import type { User, Message, GroupMessage } from "@shared/schema";
+import { Textarea as TextareaComponent } from "@/components/ui/textarea";
 
 type ConversationType = "direct" | "group";
 interface Conversation {
@@ -36,6 +37,7 @@ export default function AdminMessages() {
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [showConversationList, setShowConversationList] = useState(true);
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ['/api/users'],
@@ -233,21 +235,25 @@ export default function AdminMessages() {
   const messages = getConversationMessages();
 
   return (
-    <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-100px)] flex flex-col md:flex-row gap-0 md:gap-4 bg-background">
+    <div className="flex flex-col md:flex-row gap-3 sm:gap-4 bg-background rounded-lg border border-border overflow-hidden min-h-screen md:min-h-[600px]">
       {/* Conversations List */}
-      <div className={`w-full md:w-80 border-r border-border flex flex-col ${selectedConversation ? 'hidden md:flex' : ''}`}>
-        <div className="p-4 border-b border-border space-y-3">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <MessageSquare className="h-6 w-6" />
+      <div
+        className={`${
+          showConversationList ? 'flex' : 'hidden'
+        } md:flex w-full md:w-80 border-b md:border-b-0 md:border-r border-border flex-col`}
+      >
+        <div className="p-3 sm:p-4 border-b border-border space-y-3">
+          <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
             Chats
           </h2>
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9"
+              className="pl-9 h-9 text-sm"
               data-testid="input-search-conversations"
             />
           </div>
@@ -263,26 +269,29 @@ export default function AdminMessages() {
               filteredConversations.map((conv) => (
                 <button
                   key={conv.id}
-                  onClick={() => setSelectedConversation(conv)}
-                  className={`w-full text-left p-3 rounded-lg transition-colors hover:bg-muted ${
-                    selectedConversation?.id === conv.id ? 'bg-primary/10' : ''
+                  onClick={() => {
+                    setSelectedConversation(conv);
+                    setShowConversationList(false);
+                  }}
+                  className={`w-full text-left p-2 sm:p-3 rounded-lg transition-colors hover:bg-accent ${
+                    selectedConversation?.id === conv.id ? 'bg-primary/10 border border-primary' : ''
                   }`}
                   data-testid={`conv-${conv.id}`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2 sm:gap-3">
                     <Avatar className="h-10 w-10 flex-shrink-0">
-                      <AvatarFallback>
+                      <AvatarFallback className="text-xs">
                         {conv.type === 'group' ? <Users className="h-5 w-5" /> : (conv.userName?.[0] || '?')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium truncate">{conv.userName}</p>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                        <p className="font-medium text-sm truncate">{conv.userName}</p>
+                        <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
                           {conv.lastMessageTime && formatTime(conv.lastMessageTime)}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-1">{conv.lastMessage}</p>
                     </div>
                   </div>
                 </button>
@@ -294,40 +303,38 @@ export default function AdminMessages() {
 
       {/* Chat Area */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col md:flex-col gap-0">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Chat Header */}
-          <div className="border-b border-border p-4 flex items-center justify-between bg-background">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedConversation(null)}
-                className="md:hidden"
-                data-testid="button-back-to-conversations"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-              <Avatar className="h-10 w-10">
-                <AvatarFallback>
-                  {selectedConversation.type === 'group' ? <Users className="h-5 w-5" /> : selectedConversation.userName?.[0] || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-semibold">{selectedConversation.userName}</p>
-                {selectedConversation.type === 'direct' && selectedConversation.userRole && (
-                  <Badge variant="outline" className="text-xs mt-1">
-                    {selectedConversation.userRole === 'team_leader' ? 'Team Leader' : 'Team Member'}
-                  </Badge>
-                )}
-              </div>
+          <div className="border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowConversationList(true)}
+              className="md:hidden"
+              data-testid="button-back-to-conversations"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Avatar className="h-10 w-10 shrink-0">
+              <AvatarFallback className="text-xs">
+                {selectedConversation.type === 'group' ? <Users className="h-5 w-5" /> : selectedConversation.userName?.[0] || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{selectedConversation.userName}</p>
+              {selectedConversation.type === 'direct' && selectedConversation.userRole && (
+                <Badge variant="outline" className="text-xs mt-1">
+                  {selectedConversation.userRole === 'team_leader' ? 'Team Leader' : 'Team Member'}
+                </Badge>
+              )}
             </div>
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
+          <ScrollArea className="flex-1 p-3 sm:p-4">
+            <div className="space-y-3 sm:space-y-4">
               {messages.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground text-sm">
                   No messages yet. Start a conversation!
                 </div>
               ) : (
@@ -340,7 +347,7 @@ export default function AdminMessages() {
                       data-testid={`message-${msg.id}`}
                     >
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        className={`rounded-lg p-2 sm:p-3 max-w-xs sm:max-w-md lg:max-w-lg text-sm break-words ${
                           isOwn
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted text-muted-foreground'
@@ -349,8 +356,8 @@ export default function AdminMessages() {
                         {'title' in msg && msg.title && (
                           <p className="font-semibold text-sm mb-1">{msg.title}</p>
                         )}
-                        <p className="text-sm break-words">{msg.message}</p>
-                        <p className={`text-xs mt-1 ${isOwn ? 'opacity-70' : 'opacity-60'}`}>
+                        <p className="break-words whitespace-pre-wrap">{msg.message}</p>
+                        <p className={`text-xs mt-2 ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground/70'}`}>
                           {format(new Date(msg.createdAt), 'HH:mm')}
                         </p>
                       </div>
@@ -363,16 +370,22 @@ export default function AdminMessages() {
           </ScrollArea>
 
           {/* Message Input */}
-          <div className="border-t border-border p-4 bg-background">
+          <div className="border-t border-border p-3 sm:p-4 bg-background">
             <div className="flex gap-2">
-              <Input
+              <TextareaComponent
                 placeholder="Type a message..."
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
                 disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
                 data-testid="input-message"
-                className="flex-1"
+                className="resize-none text-sm"
+                rows={2}
               />
               <Button
                 onClick={handleSendMessage}
@@ -393,7 +406,7 @@ export default function AdminMessages() {
         <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground">
           <div className="text-center space-y-4">
             <MessageSquare className="h-16 w-16 mx-auto opacity-20" />
-            <p>Select a conversation to start messaging</p>
+            <p className="text-sm">Select a conversation to start messaging</p>
           </div>
         </div>
       )}
