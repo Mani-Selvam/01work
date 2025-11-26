@@ -1757,10 +1757,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { status } = req.body;
       console.log(`[TaskStatus] Updating task ${parseInt(req.params.id)} to status: ${status}`);
-      await storage.updateTaskStatus(parseInt(req.params.id), status);
+      
+      // Set completedAt when status changes to completed
+      const updates: any = { status };
+      if (status === 'completed') {
+        updates.completedAt = new Date();
+      }
+      
+      await storage.updateTask(parseInt(req.params.id), updates);
       console.log(`[TaskStatus] Broadcasting task update: ${parseInt(req.params.id)} -> ${status}`);
       broadcast({ type: 'task_updated', taskId: parseInt(req.params.id), status });
       res.json({ message: "Task status updated" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get task details with time logs and rework count
+  app.get("/api/tasks/:id/details", async (req, res, next) => {
+    try {
+      const requestingUserId = req.headers['x-user-id'];
+      if (!requestingUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUserById(parseInt(requestingUserId as string));
+      if (!requestingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const task = await storage.getTaskById(parseInt(req.params.id));
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Check company access unless super_admin
+      if (requestingUser.role !== 'super_admin' && task.companyId !== requestingUser.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get time logs
+      const timeLogs = await storage.getTaskTimeLogs(parseInt(req.params.id));
+      const taskTimeLog = timeLogs.find(log => log.taskId === parseInt(req.params.id));
+      
+      // Count how many times task was returned (status changed from completed to pending/returned)
+      // For now, we'll get this from message history
+      const messages = await storage.getAllMessages();
+      const returnCount = messages.filter(m => 
+        m.relatedTaskId === parseInt(req.params.id) && 
+        m.message.includes('returned')
+      ).length;
+
+      res.json({
+        task,
+        timeLogs: taskTimeLog ? {
+          totalSeconds: taskTimeLog.totalSeconds || 0,
+          oldTimeSeconds: taskTimeLog.oldTimeSeconds || 0,
+          newTimeSeconds: taskTimeLog.newTimeSeconds || 0,
+        } : null,
+        returnCount,
+      });
     } catch (error) {
       next(error);
     }
