@@ -310,8 +310,8 @@ export default function AdminMessages() {
 
       {/* Chat Area */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+          <div className="flex flex-col h-full min-h-0 overflow-hidden">
             {/* Chat Header - Fixed at Top */}
             <div className="flex-shrink-0 sticky top-0 z-50 border-b border-border p-3 sm:p-4 lg:p-5 flex items-center gap-3 bg-background shadow-md">
               <Button
@@ -343,8 +343,8 @@ export default function AdminMessages() {
             </div>
 
             {/* Messages - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-              <div className="space-y-3 sm:space-y-4">
+            <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 lg:p-5">
+              <div className="space-y-3 sm:space-y-4 flex flex-col">
                 {messages.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
                     No messages yet. Start a conversation!
