@@ -382,23 +382,25 @@ export default function AdminMessages() {
             </div>
 
             {/* Message Input - Fixed */}
-            <div className="flex-shrink-0 border-t border-border p-4 bg-background">
-              <div className="flex gap-3 items-end">
-              <TextareaComponent
-                placeholder="Type a message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
-                data-testid="input-message"
-                className="resize-none text-sm flex-1"
-                rows={3}
-              />
+            <div className="flex-shrink-0 border-t border-border p-4 bg-background/95 backdrop-blur">
+              <div className="flex gap-2 items-end">
+              <div className="flex-1 flex gap-2 items-end bg-muted/30 rounded-lg px-3 py-2 border border-border/50">
+                <TextareaComponent
+                  placeholder="Type a message..."
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
+                  data-testid="input-message"
+                  className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                  rows={2}
+                />
+              </div>
               <Button
                 onClick={handleSendMessage}
                 disabled={
@@ -406,12 +408,12 @@ export default function AdminMessages() {
                   sendPrivateMessageMutation.isPending ||
                   sendGroupMessageMutation.isPending
                 }
-                size="default"
+                size="lg"
                 data-testid="button-send-message"
-                className="flex-shrink-0 gap-2"
+                className="flex-shrink-0 gap-2 rounded-lg"
               >
-                <Send className="h-4 w-4" />
-                <span className="hidden sm:inline">Send</span>
+                <Send className="h-5 w-5" />
+                <span className="hidden sm:inline text-base font-medium">Send</span>
               </Button>
               </div>
             </div>
