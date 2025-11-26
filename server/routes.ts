@@ -1775,6 +1775,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
+      // Convert deadline string to Date object if present
+      if (updates.deadline && typeof updates.deadline === 'string') {
+        updates.deadline = new Date(updates.deadline);
+      }
       await storage.updateTask(parseInt(req.params.id), updates);
       res.json({ message: "Task updated" });
     } catch (error) {
