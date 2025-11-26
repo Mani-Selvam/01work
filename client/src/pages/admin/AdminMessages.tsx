@@ -23,6 +23,7 @@ interface Conversation {
   userId?: number;
   userName?: string;
   userRole?: string;
+  userPhoto?: string;
   lastMessage?: string;
   lastMessageTime?: Date;
   unreadCount?: number;
@@ -75,6 +76,7 @@ export default function AdminMessages() {
         userId: user.id,
         userName: user.displayName || "Unknown",
         userRole: user.role || "",
+        userPhoto: user.photoUrl || "",
         lastMessage: "No messages yet",
         lastMessageTime: new Date(0),
         unreadCount: 0,
