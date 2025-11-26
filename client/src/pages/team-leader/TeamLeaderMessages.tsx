@@ -347,7 +347,7 @@ export default function TeamLeaderMessages() {
               </div>
 
               {/* Messages - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+              <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 lg:p-5 space-y-3 sm:space-y-4 hide-scrollbar">
                 {conversationMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     <p className="text-sm">No messages yet. Start a conversation!</p>

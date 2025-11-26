@@ -281,9 +281,9 @@ export default function Messages() {
         </div>
 
         {/* RIGHT SIDE - Chat Area - Full Height */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           {selectedConversation ? (
-            <div className="flex flex-col h-full overflow-hidden">
+            <div className="flex flex-col h-full min-h-0 overflow-hidden">
               {/* Header - Fixed */}
               <div className="flex-shrink-0 sticky top-0 z-50 p-3 sm:p-4 border-b border-border flex items-center gap-3 bg-background shadow-md">
                 <Button
@@ -311,7 +311,7 @@ export default function Messages() {
               </div>
 
               {/* Messages - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+              <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 lg:p-5 space-y-3 sm:space-y-4 hide-scrollbar">
                 {conversationMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     <p className="text-sm">No messages yet</p>
