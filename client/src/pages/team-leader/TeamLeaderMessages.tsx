@@ -382,11 +382,11 @@ export default function TeamLeaderMessages() {
               </div>
 
               {/* Input - Fixed */}
-              <div className="flex-shrink-0 p-4 border-t border-border flex gap-2 items-end bg-background/95 backdrop-blur">
-                <div className="flex-1 flex gap-2 items-end bg-muted/30 rounded-lg px-3 py-2 border border-border/50">
+              <div className="flex-shrink-0 p-4 border-t border-border flex gap-3 items-end bg-background/80 backdrop-blur-md">
+                <div className="flex-1 flex gap-2 items-end bg-card/50 rounded-xl px-4 py-3 border border-primary/20 shadow-lg shadow-primary/5 hover:border-primary/40 transition-colors">
                   <Textarea
                     placeholder="Type a message..."
-                    className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                    className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/60 focus-visible:outline-none"
                     rows={2}
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
@@ -404,7 +404,7 @@ export default function TeamLeaderMessages() {
                   onClick={handleSendMessage}
                   disabled={!messageText.trim() || sendMessageMutation.isPending}
                   data-testid="button-send-message"
-                  className="flex-shrink-0 gap-2 rounded-lg"
+                  className="flex-shrink-0 gap-2 rounded-xl shadow-md hover:shadow-lg transition-shadow"
                 >
                   <Send className="h-5 w-5" />
                   <span className="hidden sm:inline text-base font-medium">Send</span>

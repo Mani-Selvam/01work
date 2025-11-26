@@ -382,9 +382,9 @@ export default function AdminMessages() {
             </div>
 
             {/* Message Input - Fixed */}
-            <div className="flex-shrink-0 border-t border-border p-4 bg-background/95 backdrop-blur">
-              <div className="flex gap-2 items-end">
-              <div className="flex-1 flex gap-2 items-end bg-muted/30 rounded-lg px-3 py-2 border border-border/50">
+            <div className="flex-shrink-0 border-t border-border p-4 bg-background/80 backdrop-blur-md">
+              <div className="flex gap-3 items-end">
+              <div className="flex-1 flex gap-2 items-end bg-card/50 rounded-xl px-4 py-3 border border-primary/20 shadow-lg shadow-primary/5 hover:border-primary/40 transition-colors">
                 <TextareaComponent
                   placeholder="Type a message..."
                   value={messageInput}
@@ -397,7 +397,7 @@ export default function AdminMessages() {
                   }}
                   disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
                   data-testid="input-message"
-                  className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                  className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/60 focus-visible:outline-none"
                   rows={2}
                 />
               </div>
@@ -410,7 +410,7 @@ export default function AdminMessages() {
                 }
                 size="lg"
                 data-testid="button-send-message"
-                className="flex-shrink-0 gap-2 rounded-lg"
+                className="flex-shrink-0 gap-2 rounded-xl shadow-md hover:shadow-lg transition-shadow"
               >
                 <Send className="h-5 w-5" />
                 <span className="hidden sm:inline text-base font-medium">Send</span>
