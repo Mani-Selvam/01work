@@ -1,10 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, Edit, Trash2, ClipboardList, Users } from "lucide-react";
+import { Plus, Calendar, User, Edit, Trash2, ClipboardList, Users, Play, Pause, CheckCircle2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +47,8 @@ export default function TeamTasks() {
     priority: "medium",
     status: "pending",
   });
+  const [timerStates, setTimerStates] = useState<Record<number, { isRunning: boolean; elapsed: number }>>({});
+  const [timerIntervals, setTimerIntervals] = useState<Record<number, NodeJS.Timeout>>({});
 
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({
     queryKey: [`/api/team-assignments/${dbUserId}/members`],
@@ -165,6 +167,59 @@ export default function TeamTasks() {
       case "in_progress": return "default";
       case "pending": return "secondary";
       default: return "secondary";
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const startTimer = (taskId: number) => {
+    setTimerStates(prev => ({
+      ...prev,
+      [taskId]: { isRunning: true, elapsed: prev[taskId]?.elapsed || 0 }
+    }));
+
+    const interval = setInterval(() => {
+      setTimerStates(prev => ({
+        ...prev,
+        [taskId]: { isRunning: true, elapsed: (prev[taskId]?.elapsed || 0) + 1 }
+      }));
+    }, 1000);
+
+    setTimerIntervals(prev => ({
+      ...prev,
+      [taskId]: interval
+    }));
+  };
+
+  const pauseTimer = (taskId: number) => {
+    setTimerStates(prev => ({
+      ...prev,
+      [taskId]: { ...prev[taskId], isRunning: false }
+    }));
+    if (timerIntervals[taskId]) {
+      clearInterval(timerIntervals[taskId]);
+    }
+  };
+
+  const completeTask = async (taskId: number) => {
+    try {
+      pauseTimer(taskId);
+      await apiRequest(`/api/tasks/${taskId}/timer/complete`, 'POST', {
+        userId: dbUserId,
+        date: new Date().toISOString().split('T')[0]
+      });
+      await updateTaskMutation.mutateAsync({
+        id: taskId,
+        status: 'completed'
+      });
+      toast({ title: "Success", description: "Task completed successfully" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to complete task", variant: "destructive" });
     }
   };
 
@@ -288,6 +343,7 @@ export default function TeamTasks() {
         <TabsContent value="my-tasks">
           <div className="grid gap-4">
             {leaderTasks.map((task) => {
+              const timer = timerStates[task.id] || { isRunning: false, elapsed: 0 };
               return (
                 <Card key={task.id} data-testid={`card-leader-task-${task.id}`}>
                   <CardHeader>
@@ -312,6 +368,44 @@ export default function TeamTasks() {
                       </div>
                     </div>
                   </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-mono font-semibold">{formatTime(timer.elapsed)}</span>
+                        <div className="flex gap-2">
+                          {!timer.isRunning ? (
+                            <Button
+                              size="sm"
+                              onClick={() => startTimer(task.id)}
+                              data-testid={`button-start-timer-${task.id}`}
+                            >
+                              <Play className="h-4 w-4 mr-2" />
+                              Start
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => pauseTimer(task.id)}
+                              data-testid={`button-pause-timer-${task.id}`}
+                            >
+                              <Pause className="h-4 w-4 mr-2" />
+                              Pause
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={() => completeTask(task.id)}
+                            disabled={updateTaskMutation.isPending}
+                            data-testid={`button-complete-task-${task.id}`}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Complete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
                 </Card>
               );
             })}
