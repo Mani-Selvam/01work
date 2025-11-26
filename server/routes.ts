@@ -1688,11 +1688,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const tasks = await storage.getTasksByCompanyId(requestingUser.companyId);
         res.json(tasks);
       } else if (requestingUser.role === 'team_leader') {
-        // Team leader sees only tasks assigned to their team members
+        // Team leader sees tasks assigned to their team members AND tasks assigned to them
         const teamMembers = await storage.getTeamMembersByLeader(requestingUser.id);
         const teamMemberIds = teamMembers.map(m => m.id);
         const allTasks = await storage.getTasksByCompanyId(requestingUser.companyId);
-        res.json(allTasks.filter(task => teamMemberIds.includes(task.assignedTo)));
+        res.json(allTasks.filter(task => teamMemberIds.includes(task.assignedTo) || task.assignedTo === requestingUser.id));
       } else if (requestingUser.role === 'company_member') {
         // Employee sees only their assigned tasks
         const tasks = await storage.getTasksByUserId(requestingUser.id);
