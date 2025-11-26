@@ -69,6 +69,7 @@ export const tasks = pgTable("tasks", {
   priority: varchar("priority", { length: 20 }).notNull().default("medium"),
   deadline: timestamp("deadline"),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
