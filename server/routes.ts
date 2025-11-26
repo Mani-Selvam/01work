@@ -1896,6 +1896,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         date
       );
+      
+      // Get the task to check its current status
+      const task = await storage.getTaskById(parseInt(req.params.id));
+      if (task) {
+        // Broadcast task update to notify all dashboards
+        broadcast({ type: 'task_updated', taskId: parseInt(req.params.id), status: task.status });
+      }
+      
       res.json(timeLog);
     } catch (error) {
       next(error);
