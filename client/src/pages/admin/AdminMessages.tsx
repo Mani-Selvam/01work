@@ -383,36 +383,38 @@ export default function AdminMessages() {
 
             {/* Message Input - Fixed */}
             <div className="flex-shrink-0 border-t border-border p-3 bg-background">
-              <div className="flex gap-2 items-end border border-border rounded-none">
-              <TextareaComponent
-                placeholder="Type a message here"
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
+              <div className="flex gap-2 items-end flex-nowrap">
+                <div className="flex-1 border border-border rounded-none flex items-center gap-2 px-4 py-2.5">
+                  <TextareaComponent
+                    placeholder="Type a message here"
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
+                    data-testid="input-message"
+                    className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/50 focus-visible:outline-none"
+                    rows={2}
+                  />
+                </div>
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={
+                    !messageInput.trim() ||
+                    sendPrivateMessageMutation.isPending ||
+                    sendGroupMessageMutation.isPending
                   }
-                }}
-                disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
-                data-testid="input-message"
-                className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/50 focus-visible:outline-none px-4 py-2.5"
-                rows={2}
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={
-                  !messageInput.trim() ||
-                  sendPrivateMessageMutation.isPending ||
-                  sendGroupMessageMutation.isPending
-                }
-                size="icon"
-                data-testid="button-send-message"
-                variant="ghost"
-                className="flex-shrink-0 h-9 w-9 rounded-none"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+                  size="icon"
+                  data-testid="button-send-message"
+                  variant="ghost"
+                  className="flex-shrink-0 h-9 w-9 rounded-none"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>

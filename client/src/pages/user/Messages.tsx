@@ -351,11 +351,11 @@ export default function Messages() {
               </div>
 
               {selectedConversation.type === 'team_leader' && (
-                <div className="flex-shrink-0 p-3 border-t border-border flex gap-2 items-end bg-background">
-                  <div className="flex-1 flex gap-2 items-end border border-border rounded-none">
+                <div className="flex-shrink-0 p-3 border-t border-border flex gap-2 items-end bg-background flex-nowrap">
+                  <div className="flex-1 border border-border rounded-none flex items-center gap-2 px-4 py-2.5">
                     <Textarea
                       placeholder="Type a message here"
-                      className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/50 focus-visible:outline-none px-4 py-2.5"
+                      className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-muted-foreground/50 focus-visible:outline-none"
                       rows={2}
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
