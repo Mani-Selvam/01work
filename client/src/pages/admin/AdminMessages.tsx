@@ -305,7 +305,7 @@ export default function AdminMessages() {
       {selectedConversation ? (
         <div className="flex-1 flex flex-col min-w-0">
           {/* Chat Header */}
-          <div className="border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background">
+          <div className="sticky top-0 z-10 border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background">
             <Button
               variant="ghost"
               size="icon"
