@@ -1792,7 +1792,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updates.deadline = new Date(updates.deadline);
       }
       await storage.updateTask(parseInt(req.params.id), updates);
-      broadcast({ type: 'task_updated', taskId: parseInt(req.params.id), status: updates.status });
+      
+      // Get the updated task to broadcast the actual status
+      const updatedTask = await storage.getTaskById(parseInt(req.params.id));
+      if (updatedTask) {
+        broadcast({ type: 'task_updated', taskId: parseInt(req.params.id), status: updatedTask.status });
+      }
+      
       res.json({ message: "Task updated" });
     } catch (error) {
       next(error);
