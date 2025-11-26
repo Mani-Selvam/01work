@@ -253,7 +253,11 @@ export default function TeamTasks() {
       await apiRequest(`/api/tasks/${taskId}/status`, 'PATCH', {
         status: 'completed'
       });
-      setCompletedTaskIds(prev => new Set([...prev, taskId]));
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      const newCompleted = new Set(completedTaskIds);
+      newCompleted.add(taskId);
+      setCompletedTaskIds(newCompleted);
       toast({ title: "Success", description: "Task completed successfully" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to complete task", variant: "destructive" });
