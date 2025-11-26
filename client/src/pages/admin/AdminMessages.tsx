@@ -309,7 +309,10 @@ export default function AdminMessages() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setShowConversationList(true)}
+              onClick={() => {
+                setShowConversationList(true);
+                setSelectedConversation(null);
+              }}
               className="md:hidden"
               data-testid="button-back-to-conversations"
             >

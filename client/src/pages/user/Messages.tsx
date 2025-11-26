@@ -289,7 +289,10 @@ export default function Messages() {
                   variant="ghost"
                   size="icon"
                   className="md:hidden"
-                  onClick={() => setShowConversationList(true)}
+                  onClick={() => {
+                    setShowConversationList(true);
+                    setSelectedConversation(null);
+                  }}
                   data-testid="button-back-conversations"
                 >
                   <ArrowLeft className="h-4 w-4" />
