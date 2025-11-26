@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, CheckCircle2, ListTodo, Star, Building2 } from "lucide-react";
+import { useTaskUpdates } from "@/hooks/useTaskUpdates";
 
 interface CompanyData {
   id: number;
@@ -14,6 +15,7 @@ interface CompanyData {
 }
 
 export default function Overview() {
+  useTaskUpdates();
   const { dbUserId, companyId } = useAuth();
 
   const { data: stats, isLoading } = useQuery({
