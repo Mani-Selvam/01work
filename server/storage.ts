@@ -596,6 +596,11 @@ export class DbStorage implements IStorage {
   }
 
   async deleteTask(id: number): Promise<void> {
+    // Clear any messages that reference this task first
+    await db.update(messages)
+      .set({ relatedTaskId: null })
+      .where(eq(messages.relatedTaskId, id));
+    
     await db.delete(tasks).where(eq(tasks.id, id));
   }
 
