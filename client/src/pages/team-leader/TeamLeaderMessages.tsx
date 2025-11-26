@@ -242,19 +242,19 @@ export default function TeamLeaderMessages() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="p-3 sm:p-4 border-b border-border">
+    <div className="h-screen w-screen flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 p-3 sm:p-4 border-b border-border">
         <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background rounded-lg border border-border overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background overflow-hidden min-w-0">
         {/* LEFT SIDEBAR - Conversations List */}
         <div
           className={`${
             showConversationList ? 'flex' : 'hidden'
-          } md:flex w-full md:w-72 border-b md:border-b-0 md:border-r border-border flex-col`}
+          } md:flex w-full md:w-72 border-b md:border-b-0 md:border-r border-border flex-col min-h-0`}
         >
-          <div className="p-3 sm:p-4 border-b border-border space-y-3">
+          <div className="flex-shrink-0 p-3 sm:p-4 border-b border-border space-y-3">
             <h3 className="font-semibold text-sm">Messages</h3>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -317,9 +317,9 @@ export default function TeamLeaderMessages() {
         </div>
 
         {/* RIGHT SIDE - Chat Area - Full Height */}
-        <div className="flex-1 flex flex-col min-w-0 h-full">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {selectedConversation ? (
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full overflow-hidden">
               {/* Header - Fixed */}
               <div className="flex-shrink-0 sticky top-0 z-50 p-3 sm:p-4 border-b border-border flex items-center gap-3 bg-background shadow-md">
                 <Button

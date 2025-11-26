@@ -237,19 +237,19 @@ export default function AdminMessages() {
   const messages = getConversationMessages();
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="p-3 sm:p-4 border-b border-border">
+    <div className="h-screen w-screen flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 p-3 sm:p-4 border-b border-border">
         <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background rounded-lg border border-border overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background overflow-hidden min-w-0">
       {/* Conversations List */}
       <div
         className={`${
           showConversationList ? 'flex' : 'hidden'
-        } md:flex w-full md:w-80 border-b md:border-b-0 md:border-r border-border flex-col`}
+        } md:flex w-full md:w-80 border-b md:border-b-0 md:border-r border-border flex-col min-h-0`}
       >
-        <div className="p-3 sm:p-4 border-b border-border space-y-3">
+        <div className="flex-shrink-0 p-3 sm:p-4 border-b border-border space-y-3">
           <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
             Chats
@@ -310,8 +310,8 @@ export default function AdminMessages() {
 
       {/* Chat Area */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col min-w-0 h-full">
-          <div className="flex flex-col h-full">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="flex flex-col h-full overflow-hidden">
             {/* Chat Header - Fixed at Top */}
             <div className="flex-shrink-0 sticky top-0 z-50 border-b border-border p-3 sm:p-4 flex items-center gap-3 bg-background shadow-md">
               <Button
