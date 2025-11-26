@@ -313,7 +313,7 @@ export default function AdminMessages() {
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           <div className="flex flex-col h-full min-h-0 overflow-hidden">
             {/* Chat Header - Fixed at Top */}
-            <div className="flex-shrink-0 sticky top-0 z-50 border-b border-border p-3 sm:p-4 lg:p-5 flex items-center gap-3 bg-background shadow-md">
+            <div className="flex-shrink-0 sticky top-0 z-50 border-b border-border px-3 sm:px-4 lg:px-5 py-2 sm:py-2 flex items-center gap-3 bg-background shadow-sm">
               <Button
                 variant="ghost"
                 size="icon"
@@ -321,21 +321,21 @@ export default function AdminMessages() {
                   setShowConversationList(true);
                   setSelectedConversation(null);
                 }}
-                className="md:hidden"
+                className="md:hidden h-8 w-8"
                 data-testid="button-back-to-conversations"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-3 w-3" />
               </Button>
-              <Avatar className="h-10 w-10 shrink-0">
+              <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src={selectedConversation.userPhoto} />
                 <AvatarFallback className="text-xs">
-                  {selectedConversation.type === 'group' ? <Users className="h-5 w-5" /> : selectedConversation.userName?.[0] || '?'}
+                  {selectedConversation.type === 'group' ? <Users className="h-4 w-4" /> : selectedConversation.userName?.[0] || '?'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{selectedConversation.userName}</p>
+                <p className="font-semibold text-xs sm:text-sm truncate">{selectedConversation.userName}</p>
                 {selectedConversation.type === 'direct' && selectedConversation.userRole && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground leading-tight">
                     {selectedConversation.userRole === 'team_leader' ? 'Team Leader' : 'Team Member'}
                   </p>
                 )}
@@ -343,8 +343,8 @@ export default function AdminMessages() {
             </div>
 
             {/* Messages - Scrollable */}
-            <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 lg:p-5 hide-scrollbar">
-              <div className="space-y-3 sm:space-y-4 flex flex-col">
+            <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-4 lg:px-5 py-2 sm:py-3 hide-scrollbar">
+              <div className="space-y-2 sm:space-y-3 flex flex-col">
                 {messages.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
                     No messages yet. Start a conversation!
@@ -382,11 +382,11 @@ export default function AdminMessages() {
             </div>
 
             {/* Message Input - Fixed */}
-            <div className="flex-shrink-0 border-t border-border p-3 sm:p-4 lg:p-5 bg-background">
-              <div className="flex gap-2 sm:gap-3 items-center flex-nowrap">
-                <div className="flex-1 flex items-center gap-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-3xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm">
+            <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 lg:px-5 py-2 sm:py-3 bg-background">
+              <div className="flex gap-2 items-center flex-nowrap">
+                <div className="flex-1 flex items-center gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-3xl px-3 py-2 shadow-sm">
                   <TextareaComponent
-                    placeholder="Type a message here"
+                    placeholder="Type a message"
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -397,7 +397,7 @@ export default function AdminMessages() {
                     }}
                     disabled={sendPrivateMessageMutation.isPending || sendGroupMessageMutation.isPending}
                     data-testid="input-message"
-                    className="resize-none text-xs sm:text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none min-h-5"
+                    className="resize-none text-xs sm:text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none min-h-4"
                     rows={1}
                   />
                 </div>
@@ -410,9 +410,9 @@ export default function AdminMessages() {
                   }
                   size="icon"
                   data-testid="button-send-message"
-                  className="flex-shrink-0 h-9 sm:h-10 w-9 sm:w-10 rounded-full shadow-md hover:shadow-lg transition-shadow"
+                  className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-full shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <Send className="h-4 sm:h-5 w-4 sm:w-5" />
+                  <Send className="h-4 w-4" />
                 </Button>
               </div>
             </div>

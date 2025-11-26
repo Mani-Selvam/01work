@@ -285,33 +285,33 @@ export default function Messages() {
           {selectedConversation ? (
             <div className="flex flex-col h-full min-h-0 overflow-hidden">
               {/* Header - Fixed */}
-              <div className="flex-shrink-0 sticky top-0 z-50 p-3 sm:p-4 border-b border-border flex items-center gap-3 bg-background shadow-md">
+              <div className="flex-shrink-0 sticky top-0 z-50 px-3 sm:px-4 lg:px-5 py-2 sm:py-2 border-b border-border flex items-center gap-3 bg-background shadow-sm">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="md:hidden"
+                  className="md:hidden h-8 w-8"
                   onClick={() => {
                     setShowConversationList(true);
                     setSelectedConversation(null);
                   }}
                   data-testid="button-back-conversations"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-3 w-3" />
                 </Button>
-                <Avatar className="h-10 w-10 shrink-0">
+                <Avatar className="h-8 w-8 shrink-0">
                   <AvatarImage src={selectedConversation.userPhoto} />
                   <AvatarFallback className="text-xs">{getInitials(selectedConversation.userName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm truncate">{selectedConversation.userName}</h3>
+                  <h3 className="font-semibold text-xs sm:text-sm truncate">{selectedConversation.userName}</h3>
                   {selectedConversation.userRole && (
-                    <p className="text-xs text-muted-foreground">{selectedConversation.userRole}</p>
+                    <p className="text-xs text-muted-foreground leading-tight">{selectedConversation.userRole}</p>
                   )}
                 </div>
               </div>
 
               {/* Messages - Scrollable */}
-              <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 lg:p-5 space-y-3 sm:space-y-4 hide-scrollbar">
+              <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-4 lg:px-5 py-2 sm:py-3 space-y-2 sm:space-y-3 hide-scrollbar">
                 {conversationMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     <p className="text-sm">No messages yet</p>
@@ -351,11 +351,11 @@ export default function Messages() {
               </div>
 
               {selectedConversation.type === 'team_leader' && (
-                <div className="flex-shrink-0 p-4 border-t border-border flex gap-3 items-center bg-background flex-nowrap">
-                  <div className="flex-1 flex items-center gap-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-3xl px-4 py-3 shadow-sm">
+                <div className="flex-shrink-0 px-3 sm:px-4 lg:px-5 py-2 sm:py-3 border-t border-border flex gap-2 items-center bg-background flex-nowrap">
+                  <div className="flex-1 flex items-center gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-3xl px-3 py-2 shadow-sm">
                     <Textarea
-                      placeholder="Type a message here"
-                      className="resize-none text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none min-h-5"
+                      placeholder="Type a message"
+                      className="resize-none text-xs sm:text-sm flex-1 bg-transparent border-0 focus-visible:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none min-h-4"
                       rows={1}
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
@@ -373,16 +373,16 @@ export default function Messages() {
                     onClick={handleSendMessage}
                     disabled={!messageText.trim() || sendMessageMutation.isPending}
                     data-testid="button-send-message"
-                    className="flex-shrink-0 h-10 w-10 rounded-full shadow-md hover:shadow-lg transition-shadow"
+                    className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-full shadow-sm hover:shadow-md transition-shadow"
                   >
-                    <Send className="h-5 w-5" />
+                    <Send className="h-4 w-4" />
                   </Button>
                 </div>
               )}
 
               {/* Input - Fixed */}
               {selectedConversation.type === 'admin' && (
-                <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border bg-muted/50 text-center">
+                <div className="flex-shrink-0 px-3 sm:px-4 py-2 border-t border-border bg-muted/50 text-center">
                   <p className="text-xs text-muted-foreground">
                     Admin messages are read-only
                   </p>
