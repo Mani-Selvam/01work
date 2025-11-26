@@ -61,12 +61,26 @@ export default function TeamTasks() {
         console.error('Failed to load timer state:', e);
       }
     }
+    
+    const savedCompletedIds = localStorage.getItem('completedTaskIds');
+    if (savedCompletedIds) {
+      try {
+        setCompletedTaskIds(new Set(JSON.parse(savedCompletedIds)));
+      } catch (e) {
+        console.error('Failed to load completed task IDs:', e);
+      }
+    }
   }, []);
 
   // Save timer state to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('taskTimers', JSON.stringify(timerStates));
   }, [timerStates]);
+
+  // Save completed task IDs to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('completedTaskIds', JSON.stringify(Array.from(completedTaskIds)));
+  }, [completedTaskIds]);
 
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({
     queryKey: [`/api/team-assignments/${dbUserId}/members`],
