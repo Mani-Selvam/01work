@@ -48,6 +48,7 @@ export default function Dashboard() {
     pendingTasks: number;
     completedTasks: number;
     totalFiles: number;
+    pendingCompletedTasks?: number;
   }>({
     queryKey: ['/api/dashboard/stats'],
   });

@@ -49,6 +49,24 @@ export default function TeamTasks() {
   });
   const [timerStates, setTimerStates] = useState<Record<number, { isRunning: boolean; elapsed: number }>>({});
   const [timerIntervals, setTimerIntervals] = useState<Record<number, NodeJS.Timeout>>({});
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<number>>(new Set());
+
+  // Load timer state from localStorage on mount
+  useEffect(() => {
+    const savedTimers = localStorage.getItem('taskTimers');
+    if (savedTimers) {
+      try {
+        setTimerStates(JSON.parse(savedTimers));
+      } catch (e) {
+        console.error('Failed to load timer state:', e);
+      }
+    }
+  }, []);
+
+  // Save timer state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('taskTimers', JSON.stringify(timerStates));
+  }, [timerStates]);
 
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({
     queryKey: [`/api/team-assignments/${dbUserId}/members`],
@@ -209,14 +227,17 @@ export default function TeamTasks() {
   const completeTask = async (taskId: number) => {
     try {
       pauseTimer(taskId);
+      const timer = timerStates[taskId];
       await apiRequest(`/api/tasks/${taskId}/timer/complete`, 'POST', {
         userId: dbUserId,
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        duration: timer?.elapsed || 0
       });
       await updateTaskMutation.mutateAsync({
         id: taskId,
         status: 'completed'
       });
+      setCompletedTaskIds(prev => new Set([...prev, taskId]));
       toast({ title: "Success", description: "Task completed successfully" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to complete task", variant: "destructive" });
@@ -370,40 +391,47 @@ export default function TeamTasks() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-mono font-semibold">{formatTime(timer.elapsed)}</span>
-                        <div className="flex gap-2">
-                          {!timer.isRunning ? (
-                            <Button
-                              size="sm"
-                              onClick={() => startTimer(task.id)}
-                              data-testid={`button-start-timer-${task.id}`}
-                            >
-                              <Play className="h-4 w-4 mr-2" />
-                              Start
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => pauseTimer(task.id)}
-                              data-testid={`button-pause-timer-${task.id}`}
-                            >
-                              <Pause className="h-4 w-4 mr-2" />
-                              Pause
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            onClick={() => completeTask(task.id)}
-                            disabled={updateTaskMutation.isPending}
-                            data-testid={`button-complete-task-${task.id}`}
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Complete
-                          </Button>
+                      {completedTaskIds.has(task.id) ? (
+                        <div className="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900 rounded-md">
+                          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          <span className="text-green-800 dark:text-green-200 font-semibold">Task Completed</span>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xl font-mono font-semibold">{formatTime(timer.elapsed)}</span>
+                          <div className="flex gap-2">
+                            {!timer.isRunning ? (
+                              <Button
+                                size="sm"
+                                onClick={() => startTimer(task.id)}
+                                data-testid={`button-start-timer-${task.id}`}
+                              >
+                                <Play className="h-4 w-4 mr-2" />
+                                Start
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => pauseTimer(task.id)}
+                                data-testid={`button-pause-timer-${task.id}`}
+                              >
+                                <Pause className="h-4 w-4 mr-2" />
+                                Pause
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => completeTask(task.id)}
+                              disabled={updateTaskMutation.isPending}
+                              data-testid={`button-complete-task-${task.id}`}
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Complete
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
