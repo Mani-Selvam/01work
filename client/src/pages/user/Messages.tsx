@@ -208,12 +208,12 @@ export default function Messages() {
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <div>
+    <div className="h-screen flex flex-col">
+      <div className="p-3 sm:p-4 border-b border-border">
         <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3 sm:gap-4 bg-background rounded-lg border border-border overflow-hidden min-h-screen md:min-h-[600px]">
+      <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background rounded-lg border border-border overflow-hidden">
         {/* LEFT SIDEBAR - Conversations List */}
         <div
           className={`${

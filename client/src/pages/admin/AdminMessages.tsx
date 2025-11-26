@@ -76,7 +76,7 @@ export default function AdminMessages() {
         userId: user.id,
         userName: user.displayName || "Unknown",
         userRole: user.role || "",
-        userPhoto: user.photoUrl || "",
+        userPhoto: user.photoURL || "",
         lastMessage: "No messages yet",
         lastMessageTime: new Date(0),
         unreadCount: 0,
@@ -237,7 +237,12 @@ export default function AdminMessages() {
   const messages = getConversationMessages();
 
   return (
-    <div className="flex flex-col md:flex-row gap-3 sm:gap-4 bg-background rounded-lg border border-border overflow-hidden min-h-screen md:min-h-[600px]">
+    <div className="h-screen flex flex-col">
+      <div className="p-3 sm:p-4 border-b border-border">
+        <h2 className="text-2xl sm:text-3xl font-bold">Messages</h2>
+      </div>
+
+      <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background rounded-lg border border-border overflow-hidden">
       {/* Conversations List */}
       <div
         className={`${
@@ -418,6 +423,8 @@ export default function AdminMessages() {
           </div>
         </div>
       )}
+    </div>
+      </div>
     </div>
   );
 }
