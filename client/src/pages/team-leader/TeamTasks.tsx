@@ -35,7 +35,6 @@ interface TeamMember {
 }
 
 export default function TeamTasks() {
-  useTaskUpdates();
   const { dbUserId } = useAuth();
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -72,6 +71,51 @@ export default function TeamTasks() {
         console.error('Failed to load completed task IDs:', e);
       }
     }
+  }, []);
+
+  // Listen to WebSocket updates to handle status changes
+  useEffect(() => {
+    const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
+
+    ws.onopen = () => {
+      console.log('[WebSocket] Connected for task updates');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        
+        if (message.type === 'task_updated') {
+          console.log('[WebSocket] Task update received:', message);
+          // If task was reverted to pending, clear it from completed
+          if (message.status === 'pending') {
+            setCompletedTaskIds(prev => {
+              const updated = new Set(prev);
+              updated.delete(message.taskId);
+              return updated;
+            });
+            // Also reset timer for this task
+            setTimerStates(prev => ({
+              ...prev,
+              [message.taskId]: { isRunning: false, elapsed: 0 }
+            }));
+          }
+          // Invalidate queries to force refetch
+          queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+        }
+      } catch (error) {
+        console.error('[WebSocket] Error parsing message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('[WebSocket] Error:', error);
+    };
+
+    return () => {
+      ws.close();
+    };
   }, []);
 
   // Save timer state to localStorage whenever it changes
