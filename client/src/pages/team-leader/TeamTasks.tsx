@@ -502,16 +502,6 @@ export default function TeamTasks() {
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => deleteTaskMutation.mutate(task.id)}
-                        disabled={deleteTaskMutation.isPending}
-                        data-testid={`button-delete-task-${task.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
