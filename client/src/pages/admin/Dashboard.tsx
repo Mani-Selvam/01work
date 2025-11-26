@@ -19,6 +19,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTaskUpdates } from "@/hooks/useTaskUpdates";
 import { useState } from "react";
 import type { SlotPricing, CompanyPayment, Company } from "@shared/schema";
 
@@ -33,6 +34,7 @@ interface CompanyData {
 }
 
 export default function Dashboard() {
+  useTaskUpdates();
   const [, setLocation] = useLocation();
   const { dbUserId, companyId, userRole } = useAuth();
   const { toast } = useToast();

@@ -1757,6 +1757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { status } = req.body;
       await storage.updateTaskStatus(parseInt(req.params.id), status);
+      broadcast({ type: 'task_updated', taskId: parseInt(req.params.id), status });
       res.json({ message: "Task status updated" });
     } catch (error) {
       next(error);
@@ -1791,6 +1792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updates.deadline = new Date(updates.deadline);
       }
       await storage.updateTask(parseInt(req.params.id), updates);
+      broadcast({ type: 'task_updated', taskId: parseInt(req.params.id), status: updates.status });
       res.json({ message: "Task updated" });
     } catch (error) {
       next(error);
@@ -1820,6 +1822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteTask(parseInt(req.params.id));
+      broadcast({ type: 'task_deleted', taskId: parseInt(req.params.id) });
       res.json({ message: "Task deleted" });
     } catch (error) {
       next(error);
