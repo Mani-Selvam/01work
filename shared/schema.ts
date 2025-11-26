@@ -153,6 +153,8 @@ export const taskTimeLogs = pgTable("task_time_logs", {
   userId: integer("user_id").references(() => users.id).notNull(),
   date: varchar("date", { length: 10 }).notNull(),
   totalSeconds: integer("total_seconds").notNull().default(0),
+  oldTimeSeconds: integer("old_time_seconds").notNull().default(0),
+  newTimeSeconds: integer("new_time_seconds").notNull().default(0),
   timerStartedAt: timestamp("timer_started_at"),
   timerStatus: varchar("timer_status", { length: 20 }).notNull().default("stopped"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
