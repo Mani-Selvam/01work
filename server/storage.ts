@@ -601,6 +601,9 @@ export class DbStorage implements IStorage {
       .set({ relatedTaskId: null })
       .where(eq(messages.relatedTaskId, id));
     
+    // Delete any task time logs for this task
+    await db.delete(taskTimeLogs).where(eq(taskTimeLogs.taskId, id));
+    
     await db.delete(tasks).where(eq(tasks.id, id));
   }
 
