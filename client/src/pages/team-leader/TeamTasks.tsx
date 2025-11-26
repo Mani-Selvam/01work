@@ -249,8 +249,8 @@ export default function TeamTasks() {
         date: new Date().toISOString().split('T')[0],
         duration: timer?.elapsed || 0
       });
-      await updateTaskMutation.mutateAsync({
-        id: taskId,
+      // Use the status endpoint to update task status
+      await apiRequest(`/api/tasks/${taskId}/status`, 'PATCH', {
         status: 'completed'
       });
       setCompletedTaskIds(prev => new Set([...prev, taskId]));
