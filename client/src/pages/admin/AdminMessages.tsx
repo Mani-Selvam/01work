@@ -237,7 +237,7 @@ export default function AdminMessages() {
   const messages = getConversationMessages();
 
   return (
-    <div className="h-[90vh] w-full flex flex-col overflow-hidden">
+    <div className="h-[85vh] md:h-[90vh] w-full flex flex-col overflow-hidden">
       <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background overflow-hidden min-w-0 w-full">
       {/* Conversations List */}
       <div
