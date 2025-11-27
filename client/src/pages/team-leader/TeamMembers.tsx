@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, UserPlus, Mail, Phone, UserCheck, UserX } from "lucide-react";
+import { Search, Mail, UserX } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,15 +68,9 @@ export default function TeamMembers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">My Team</h1>
-          <p className="text-muted-foreground">Manage your assigned team members</p>
-        </div>
-        <Button data-testid="button-add-member" disabled>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add Member
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">My Team</h1>
+        <p className="text-muted-foreground">Manage your assigned team members</p>
       </div>
 
       <div className="flex items-center gap-4">
@@ -134,12 +128,6 @@ export default function TeamMembers() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Mail className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">{member.email}</span>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1" data-testid={`button-view-${member.id}`}>
-                  <UserCheck className="h-4 w-4 mr-2" />
-                  View Details
-                </Button>
               </div>
             </CardContent>
           </Card>
