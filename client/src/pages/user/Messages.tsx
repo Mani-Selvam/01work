@@ -208,7 +208,7 @@ export default function Messages() {
   }
 
   return (
-    <div className="h-[85vh] md:h-[90vh] w-full flex flex-col overflow-hidden">
+    <div className="h-[80vh] md:h-[90vh] w-full flex flex-col overflow-hidden">
       <div className="flex-1 flex flex-col md:flex-row gap-0 bg-background overflow-hidden min-w-0">
         {/* LEFT SIDEBAR - Conversations List */}
         <div
