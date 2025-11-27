@@ -237,7 +237,7 @@ export default function AdminMessages() {
   const messages = getConversationMessages();
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden">
+    <div className="h-[90vh] w-full flex flex-col overflow-hidden">
       <div className="flex-shrink-0 p-3 sm:p-4 lg:p-5 border-b border-border">
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold">Messages</h2>
       </div>
