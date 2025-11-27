@@ -34,7 +34,6 @@ const navItems: NavItem[] = [
   { path: "/user/reports", label: "Reports", icon: FileText },
   { path: "/user/messages", label: "Messages", icon: MessageSquare },
   { path: "/user/feedback", label: "Feedback", icon: MessageCircle },
-  { path: "/user/announcements", label: "Announcements", icon: Megaphone },
   { path: "/user/tasks", label: "Assigned Tasks", icon: ListTodo },
   { path: "/user/report-view", label: "View Reports", icon: Eye },
   { path: "/user/ratings", label: "Ratings", icon: Star },

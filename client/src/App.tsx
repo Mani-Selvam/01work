@@ -21,7 +21,6 @@ import Overview from "@/pages/user/Overview";
 import Reports from "@/pages/user/Reports";
 import Messages from "@/pages/user/Messages";
 import Feedback from "@/pages/user/Feedback";
-import Announcements from "@/pages/user/Announcements";
 import Tasks from "@/pages/user/Tasks";
 import ReportView from "@/pages/user/ReportView";
 import Ratings from "@/pages/user/Ratings";
@@ -60,7 +59,6 @@ import TeamLeaderAttendance from "@/pages/team-leader/TeamLeaderAttendance";
 import TeamAttendanceMonitor from "@/pages/team-leader/TeamAttendanceMonitor";
 import TeamAttendanceReports from "@/pages/team-leader/TeamAttendanceReports";
 import TeamLeaderMessages from "@/pages/team-leader/TeamLeaderMessages";
-import TeamLeaderAnnouncements from "@/pages/team-leader/TeamLeaderAnnouncements";
 import TeamRatings from "@/pages/team-leader/TeamRatings";
 import TeamFeedback from "@/pages/team-leader/TeamFeedback";
 
@@ -166,9 +164,6 @@ function Router() {
       </Route>
       <Route path="/user/feedback">
         {() => <ProtectedRoute component={() => <UserLayout><Feedback /></UserLayout>} allowedRole="user" />}
-      </Route>
-      <Route path="/user/announcements">
-        {() => <ProtectedRoute component={() => <UserLayout><Announcements /></UserLayout>} allowedRole="user" />}
       </Route>
       <Route path="/user/tasks">
         {() => <ProtectedRoute component={() => <UserLayout><Tasks /></UserLayout>} allowedRole="user" />}
@@ -292,9 +287,6 @@ function Router() {
       </Route>
       <Route path="/team-leader/messages">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderMessages /></TeamLeaderLayout>} allowedRole="team_leader" />}
-      </Route>
-      <Route path="/team-leader/announcements">
-        {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamLeaderAnnouncements /></TeamLeaderLayout>} allowedRole="team_leader" />}
       </Route>
       <Route path="/team-leader/ratings">
         {() => <ProtectedRoute component={() => <TeamLeaderLayout><TeamRatings /></TeamLeaderLayout>} allowedRole="team_leader" />}
