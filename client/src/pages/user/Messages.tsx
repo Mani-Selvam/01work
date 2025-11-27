@@ -230,7 +230,7 @@ export default function Messages() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-1 p-2">
+          <div className="flex-1 overflow-y-auto space-y-1 p-2 hide-scrollbar">
             {filteredConversations.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 <p className="text-sm">No conversations</p>

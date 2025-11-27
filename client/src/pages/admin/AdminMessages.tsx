@@ -262,7 +262,7 @@ export default function AdminMessages() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto hide-scrollbar">
           <div className="space-y-1 p-2">
             {filteredConversations.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
@@ -301,7 +301,7 @@ export default function AdminMessages() {
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Chat Area */}
