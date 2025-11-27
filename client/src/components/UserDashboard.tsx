@@ -394,38 +394,6 @@ export default function UserDashboard() {
                 </div>
               )}
             </div>
-
-            {/* Announcements */}
-            <div>
-              <h3 className="text-xl font-semibold mb-4">
-                Announcements ({groupMessages.length})
-              </h3>
-              {groupMessages.length > 0 ? (
-                <div className="space-y-3">
-                  {groupMessages.map(announcement => (
-                    <div 
-                      key={announcement.id} 
-                      className="bg-card border rounded-lg p-4 hover-elevate"
-                      data-testid={`announcement-${announcement.id}`}
-                    >
-                      {announcement.title && (
-                        <h4 className="font-semibold text-primary mb-2">{announcement.title}</h4>
-                      )}
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {announcement.message}
-                      </p>
-                      <div className="text-xs text-muted-foreground font-mono">
-                        {new Date(announcement.createdAt).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No announcements
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>

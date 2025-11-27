@@ -375,45 +375,6 @@ export default function TeamLeaderDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      <Card data-testid="card-announcements">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Recent Announcements
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {groupMessages.length > 0 ? (
-            <div className="space-y-3">
-              {groupMessages.slice(0, 5).map((msg) => (
-                <div 
-                  key={msg.id} 
-                  className="p-3 rounded-md bg-muted/50 space-y-1"
-                  data-testid={`announcement-${msg.id}`}
-                >
-                  {msg.title && (
-                    <h4 className="font-semibold text-sm">{msg.title}</h4>
-                  )}
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {msg.message}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(msg.createdAt), "MMM dd, yyyy 'at' h:mm a")}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                No announcements yet
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
